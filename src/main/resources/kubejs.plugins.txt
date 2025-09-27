@@ -1,0 +1,1 @@
+pelemenguin.classjs.ClassJSPlugin classjs
