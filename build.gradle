@@ -158,7 +158,6 @@ dependencies {
     // compileOnly fg.deobf("mezz.jei:jei-${mc_version}-common-api:${jei_version}")
     // compileOnly fg.deobf("mezz.jei:jei-${mc_version}-forge-api:${jei_version}")
     // runtimeOnly fg.deobf("mezz.jei:jei-${mc_version}-forge:${jei_version}")
-    runtimeOnly fg.deobf("curse.maven:probejs-585406:5227399")
 
 
     // Example mod dependency using a mod jar from ./libs with a flat dir repository
@@ -168,6 +167,7 @@ dependencies {
     implementation fg.deobf("curse.maven:kubejs-238086:5853326") // KubeJS
     implementation fg.deobf("curse.maven:rhino-416294:6186971") // Rhino
     implementation fg.deobf("curse.maven:architectury-api-419699:5137938") // Architectury API
+    implementation fg.deobf("curse.maven:probejs-585406:5227399") // ProbeJS
 
     // For more info:
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html

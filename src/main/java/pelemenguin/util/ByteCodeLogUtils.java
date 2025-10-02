@@ -1,6 +1,9 @@
 package pelemenguin.util;
 
+import org.slf4j.Logger;
+
 import pelemenguin.classjs.content.ClassCreator;
+import pelemenguin.classjs.library.ClassJSClassLoader;
 
 public class ByteCodeLogUtils {
 
@@ -36,7 +39,7 @@ public class ByteCodeLogUtils {
         return sb.toString();
     }
 
-    public static String logClassCreated(ClassCreator classCreator, byte[] bytes) {
-        return logBytes(bytes);
+    public static void logClassCreated(Logger logger, String className, byte[] bytes) {
+        logger.debug("Class created: (" + className + ")" + logBytes(bytes));
     }
 }
