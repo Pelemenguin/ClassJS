@@ -2,9 +2,6 @@ package pelemenguin.util;
 
 import org.slf4j.Logger;
 
-import pelemenguin.classjs.content.ClassCreator;
-import pelemenguin.classjs.library.ClassJSClassLoader;
-
 public class ByteCodeLogUtils {
 
     // No constructors available
@@ -33,7 +30,7 @@ public class ByteCodeLogUtils {
             }
             int b = bytes[i] & 0xFF;
             sb.append(' ');
-            sb.append(b >>> 0xFF);
+            sb.append(HEX_TABLE[(b >> 8) & 0x0F]);
             sb.append(HEX_TABLE[b & 0x0F]);
         }
         return sb.toString();
