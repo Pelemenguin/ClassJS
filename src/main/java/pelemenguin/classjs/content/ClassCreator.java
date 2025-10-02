@@ -126,7 +126,7 @@ public class ClassCreator {
     public ClassCreator toInterface() {
         this.toClass();
         this.access &= ~(Opcodes.ACC_FINAL | Opcodes.ACC_SUPER);
-        this.access |= Opcodes.ACC_ABSTRACT;
+        this.access |= (Opcodes.ACC_ABSTRACT | Opcodes.ACC_INTERFACE);
         return this;
     }
 
@@ -299,7 +299,7 @@ public class ClassCreator {
         return this;
     }
 
-    public Object defineClass() {
+    public Class<?> defineClass() {
         this.classWriter.visit(this.version, this.access, this.getInternalName(), null, "java/lang/Object", null);
         return ClassJSClassLoader.INSTANCE.defineClass(this.getClassName(), this.classWriter.toByteArray());
     }

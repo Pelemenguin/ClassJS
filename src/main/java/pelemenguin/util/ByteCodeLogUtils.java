@@ -30,7 +30,7 @@ public class ByteCodeLogUtils {
             }
             int b = bytes[i] & 0xFF;
             sb.append(' ');
-            sb.append(HEX_TABLE[(b >> 8) & 0x0F]);
+            sb.append(HEX_TABLE[(b >> 4) & 0x0F]);
             sb.append(HEX_TABLE[b & 0x0F]);
         }
         return sb.toString();
