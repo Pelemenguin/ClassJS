@@ -378,6 +378,328 @@ public class MethodCreator {
 
         @Info(
             """
+            Add a `nop` (no operation) instruction to the method.
+
+            The `nop` instruction does nothing and is often used for alignment or timing purposes.
+
+            **Operand Stack:**
+
+            {...}  
+            → {...}
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuidler noOperation() {
+            this.methodVisitor.visitInsn(Opcodes.NOP);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `aconst_null` instruction to the method.
+
+            The `aconst_null` instruction pushes a `null` reference onto the operand stack.
+
+            **Operand Stack:**
+
+            { ... }  
+            → { ... , `null` }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuidler pushNull() {
+            this.methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an instruction to push an integer constant onto the operand stack.
+
+            The method optimizes the instruction based on the value of the integer:
+            - For values between -1 and 5 (inclusive), it uses the `ICONST_<i>` instructions.
+            - For values between -128 and 127 (inclusive), it uses the `BIPUSH` instruction.
+            - For values between -32,768 and 32,767 (inclusive), it uses the `SIPUSH` instruction.
+            - For all other values, it uses the `LDC` instruction.
+
+            **Operand Stack:** (*i* is the pushed integer constant.)
+
+            { ... }  
+            → { ... , *i* }
+
+            @param i - The integer constant to push onto the operand stack.
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuidler pushInt(int i) {
+            if (i >= -1 && i <= 5) {
+                this.methodVisitor.visitInsn(Opcodes.ICONST_0 + i);
+            } else if (i >= Byte.MIN_VALUE && i <= Byte.MAX_VALUE) {
+                this.methodVisitor.visitIntInsn(Opcodes.BIPUSH, i);
+            } else if (i >= Short.MIN_VALUE && i <= Short.MAX_VALUE) {
+                this.methodVisitor.visitIntInsn(Opcodes.SIPUSH, i);
+            } else {
+                this.methodVisitor.visitLdcInsn(i);
+            }
+            return this;
+        }
+
+        @Info(
+            """
+            Add an instruction to push a long constant onto the operand stack.
+
+            The method optimizes the instruction based on the value of the long:
+            - For values 0L and 1L, it uses the `LCONST_0` and `LCONST_1` instructions respectively.
+            - For all other values, it uses the `LDC` instruction.
+
+            **Operand Stack:** (*l* is the pushed long constant. "---" is the second slot taken by the long.)
+
+            { ... }  
+            → { ... , *l* , --- }
+
+            @param l - The long constant to push onto the operand stack.
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuidler pushLong(long l) {
+            if (l == 0L) {
+                this.methodVisitor.visitInsn(Opcodes.LCONST_0);
+            } else if (l == 1L) {
+                this.methodVisitor.visitInsn(Opcodes.LCONST_1);
+            } else {
+                this.methodVisitor.visitLdcInsn(l);
+            }
+            return this;
+        }
+
+        @Info(
+            """
+            Add an instruction to push a float constant onto the operand stack.
+
+            The method optimizes the instruction based on the value of the float:
+            - For values 0.0f, 1.0f, and 2.0f, it uses the `FCONST_0`, `FCONST_1`, and `FCONST_2` instructions respectively.
+            - For all other values, it uses the `LDC` instruction.
+
+            **Operand Stack:** (*f* is the pushed float constant.)
+
+            { ... }  
+            → { ... , *f* }
+
+            @param f - The float constant to push onto the operand stack.
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuidler pushFloat(float f) {
+            if (f == 0.0f) {
+                this.methodVisitor.visitInsn(Opcodes.FCONST_0);
+            } else if (f == 1.0f) {
+                this.methodVisitor.visitInsn(Opcodes.FCONST_1);
+            } else if (f == 2.0f) {
+                this.methodVisitor.visitInsn(Opcodes.FCONST_2);
+            } else {
+                this.methodVisitor.visitLdcInsn(f);
+            }
+            return this;
+        }
+
+        @Info(
+            """
+            Add an instruction to push a double constant onto the operand stack.
+
+            The method optimizes the instruction based on the value of the double:
+            - For values 0.0 and 1.0, it uses the `DCONST_0` and `DCONST_1` instructions respectively.
+            - For all other values, it uses the `LDC` instruction.
+
+            **Operand Stack:** (*d* is the pushed double constant. "---" is the second slot taken by the double.)
+
+            { ... }  
+            → { ... , *d* , --- }
+
+            @param d - The double constant to push onto the operand stack.
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuidler pushDouble(double d) {
+            if (d == 0.0) {
+                this.methodVisitor.visitInsn(Opcodes.DCONST_0);
+            } else if (d == 1.0) {
+                this.methodVisitor.visitInsn(Opcodes.DCONST_1);
+            } else {
+                this.methodVisitor.visitLdcInsn(d);
+            }
+            return this;
+        }
+
+        @Info(
+            """
+            Add an instruction to push a string constant onto the operand stack.
+
+            The method uses the `LDC` instruction to push the string.
+
+            **Operand Stack:** (*s* is the pushed string constant.)
+
+            { ... }  
+            → { ... , *s* }
+
+            @param s - The string constant to push onto the operand stack.
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuidler pushString(String s) {
+            this.methodVisitor.visitLdcInsn(s);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `pop` instruction to the method.
+
+            The `pop` instruction removes the top value from the operand stack.
+
+            **Note:** This instruction can only be used to pop values that take up one slot (e.g., int, float, reference).
+                For removing longs and doubles, use the `pop2` instruction instead.
+
+            **Operand Stack:** (*v* is the popped value.)
+
+            { ... , *v* }  
+            → { ... }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuidler pop() {
+            this.methodVisitor.visitInsn(Opcodes.POP);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `pop2` instruction to the method.
+
+            The `pop2` instruction removes the top one or two values from the operand stack.
+
+            **Operand Stack:**
+
+            - If the top value is a long or double: (*v1* is the popped long or double, and "---" is the second slot taken.)  
+              { ... , *v1* , --- }  
+              → { ... }
+
+            - Otherwise: (*v1* and *v2* are the popped values and neither of them is a long or a double.)  
+              { ... , *v2* , *v1* }  
+              → { ... }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuidler pop2() {
+            this.methodVisitor.visitInsn(Opcodes.POP2);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `ireturn` instruction to the method.
+
+            The `ireturn` instruction is used to return an integer from a method.
+            Before `ireturn`, the operand stack must have ***one and only one*** integer value.
+
+            **Operand Stack:** (*i* is the returned integer.)
+
+            { *i* }  
+            → [*EMPTY*]
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuidler returnInt() {
+            this.methodVisitor.visitInsn(Opcodes.IRETURN);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `lreturn` instruction to the method.
+
+            The `lreturn` instruction is used to return a long from a method.
+            Before `lreturn`, the operand stack must have ***one and only one*** long value (which takes two slots).
+
+            **Operand Stack:** (*l* is the returned long. "---" is the second slot taken by the long.)
+
+            { *l* , --- }  
+            → [*EMPTY*]
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuidler returnLong() {
+            this.methodVisitor.visitInsn(Opcodes.LRETURN);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `freturn` instruction to the method.
+
+            The `freturn` instruction is used to return a float from a method.
+            Before `freturn`, the operand stack must have ***one and only one*** float value.
+
+            **Operand Stack:** (*f* is the returned float.)
+
+            { *f* }  
+            → [*EMPTY*]
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuidler returnFloat() {
+            this.methodVisitor.visitInsn(Opcodes.FRETURN);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `dreturn` instruction to the method.
+
+            The `dreturn` instruction is used to return a double from a method.
+            Before `dreturn`, the operand stack must have ***one and only one*** double value (which takes two slots).
+
+            **Operand Stack:** (*d* is the returned double. "---" is the second slot taken by the double.)
+
+            { *d* , --- }  
+            → [*EMPTY*]
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuidler returnDouble() {
+            this.methodVisitor.visitInsn(Opcodes.DRETURN);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `areturn` instruction to the method.
+
+            The `areturn` instruction is used to return a reference from a method.
+            Before `areturn`, the operand stack must have ***one and only one*** reference value.
+
+            **Operand Stack:** (*o* is the returned reference.)
+
+            { *o* }  
+            → [*EMPTY*]
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuidler returnObject() {
+            this.methodVisitor.visitInsn(Opcodes.ARETURN);
+            return this;
+        }
+
+        @Info(
+            """
             Add a `return` instruction to the method.
 
             The `return` instruction is used to return from a method that has a `void` return type.
@@ -385,8 +707,8 @@ public class MethodCreator {
 
             **Operand Stack:**
 
-            {}  
-            → {}
+            [*EMPTY*]  
+            → [*EMPTY*]
 
             @returns This `MethodCodeBuilder` instance.
             """
