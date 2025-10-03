@@ -1,5 +1,7 @@
 package pelemenguin.classjs.content;
 
+import java.util.ArrayList;
+
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
@@ -13,6 +15,9 @@ public class MethodCreator {
     private int access = 0;
     private String name;
     private String descriptor;
+
+    // Parameter names used in MethodCodeBuilder
+    private String[] paramNames;
     
     public MethodCreator(ClassCreator parent, String name, String[] parameterTypes, String returnType) {
         this.parent = parent;
@@ -331,6 +336,21 @@ public class MethodCreator {
 
     @Info(
         """
+        Specify the parameter names to use later in `ByteCodeBuilder`.
+
+        By default, `arg0`, `arg1`, etc. are used to refer to method parameters.
+
+        @param paramNames - The name of parameters. Must have the same length as the parameter types specified when creating this method.
+        @returns This `MethodCreator` instance.
+        """
+    )
+    public MethodCreator parameterNames(String[] paramNames) {
+        this.paramNames = paramNames;
+        return this;
+    }
+
+    @Info(
+        """
         Begin byte code building.
 
         If you want to create *abstract* methods, use {@linkcode noCode}.
@@ -342,8 +362,8 @@ public class MethodCreator {
             Access modifier and other properties of this method should be set before calling this method.
         """
     )
-    public MethodCodeBuidler code() {
-        return new MethodCodeBuidler(this);
+    public MethodCodeBuilder code() {
+        return new MethodCodeBuilder(this);
     }
 
     @Info(
@@ -364,16 +384,46 @@ public class MethodCreator {
         return this.parent;
     }
 
-    public static class MethodCodeBuidler {
+    public static class MethodCodeBuilder {
 
         private MethodCreator parent;
 
         private MethodVisitor methodVisitor;
 
-        public MethodCodeBuidler(MethodCreator parent) {
+        private ArrayList<String> localVariableNames = new ArrayList<>();
+        private ArrayList<String> localVariableTypes = new ArrayList<>();
+
+        public MethodCodeBuilder(MethodCreator parent) {
             this.parent = parent;
             this.methodVisitor = this.parent.parent.classWriter.visitMethod(this.parent.access, this.parent.name, this.parent.descriptor, null, null);
             this.methodVisitor.visitCode();
+
+            String[] paramTypes = DescriptorUtils.fromMethodDescriptor(this.parent.descriptor);
+            if ((this.parent.access & Opcodes.ACC_STATIC) == 0) {
+                this.localVariableNames.add("this");
+                this.localVariableTypes.add(DescriptorUtils.toFieldDescriptor(this.parent.parent.getClassName()));
+            }
+
+            String[] tempVarNames = this.parent.paramNames;
+            if (tempVarNames == null) {
+                tempVarNames = new String[paramTypes.length - 1];
+                for (int i = 0; i < paramTypes.length - 1; i ++) {
+                    tempVarNames[i] = "arg" + i;
+                }
+            } else if (tempVarNames.length != paramTypes.length - 1) {
+                throw new IllegalArgumentException("Parameter names count does not match parameter types count");
+            }
+
+            for (int i = 0; i < paramTypes.length - 1; i ++) {
+                String type = paramTypes[i];
+                String name = tempVarNames[i];
+                this.localVariableNames.add(name);
+                this.localVariableTypes.add(type);
+                if (type.equals("long") || type.equals("double")) {
+                    this.localVariableNames.add(null);
+                    this.localVariableTypes.add(null); // Dummy type for the wide slot
+                }
+            }
         }
 
         @Info(
@@ -390,7 +440,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuidler noOperation() {
+        public MethodCodeBuilder noOperation() {
             this.methodVisitor.visitInsn(Opcodes.NOP);
             return this;
         }
@@ -409,7 +459,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuidler pushNull() {
+        public MethodCodeBuilder pushNull() {
             this.methodVisitor.visitInsn(Opcodes.ACONST_NULL);
             return this;
         }
@@ -433,7 +483,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuidler pushInt(int i) {
+        public MethodCodeBuilder pushInt(int i) {
             if (i >= -1 && i <= 5) {
                 this.methodVisitor.visitInsn(Opcodes.ICONST_0 + i);
             } else if (i >= Byte.MIN_VALUE && i <= Byte.MAX_VALUE) {
@@ -463,7 +513,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuidler pushLong(long l) {
+        public MethodCodeBuilder pushLong(long l) {
             if (l == 0L) {
                 this.methodVisitor.visitInsn(Opcodes.LCONST_0);
             } else if (l == 1L) {
@@ -491,7 +541,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuidler pushFloat(float f) {
+        public MethodCodeBuilder pushFloat(float f) {
             if (f == 0.0f) {
                 this.methodVisitor.visitInsn(Opcodes.FCONST_0);
             } else if (f == 1.0f) {
@@ -521,7 +571,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuidler pushDouble(double d) {
+        public MethodCodeBuilder pushDouble(double d) {
             if (d == 0.0) {
                 this.methodVisitor.visitInsn(Opcodes.DCONST_0);
             } else if (d == 1.0) {
@@ -547,8 +597,336 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuidler pushString(String s) {
+        public MethodCodeBuilder pushString(String s) {
             this.methodVisitor.visitLdcInsn(s);
+            return this;
+        }
+
+        private int getVariableIndexOrThrow(String variableName, String requiredType) {
+            int result = getVariableIndexOrThrow(variableName);
+            if (this.localVariableTypes.get(result).equals(requiredType)) return result;
+            throw new IllegalArgumentException("Local variable '" + variableName + "' is not of type '" + requiredType + "', but a '" +
+                this.localVariableTypes.get(result) +"'.");
+        }
+
+        private int getVariableIndexOrThrow(String variableName) {
+            int index = this.localVariableNames.indexOf(variableName);
+            if (index == -1) {
+                throw new IllegalArgumentException("Local variable '" + variableName + "' does not exist.");
+            }
+            return index;
+        }
+
+        private int getVariableIndexOrDeclare(String variableName, String requiredType) {
+            if (requiredType == "long" || requiredType == "double") {
+                throw new IllegalArgumentException("Use getVariableIndexOrDeclareWide for long and double types.");
+            }
+            int index = this.localVariableNames.indexOf(variableName);
+            if (index == -1) {
+                this.localVariableNames.add(variableName);
+                this.localVariableTypes.add(requiredType);
+                index = this.localVariableNames.size() - 1;
+            } else {
+                String original = this.localVariableTypes.get(index);
+                if (original == "long" || original == "double") {
+                    throw new IllegalArgumentException("Local variable '" + variableName + "' is of wide type '" + original + "'.");
+                }
+                this.localVariableTypes.set(index, requiredType);
+            }
+            return index;
+        }
+
+        // Push a null to the second slot of the wide variable into the variable table
+        private int getVariableIndexOrDeclareWide(String variableName, String requiredType) {
+            if (!requiredType.equals("long") && !requiredType.equals("double")) {
+                throw new IllegalArgumentException("Only long and double is allowed, but received " + requiredType);
+            }
+            int index = this.localVariableNames.indexOf(variableName);
+            if (index == -1) {
+                this.localVariableNames.add(variableName);
+                this.localVariableTypes.add(requiredType);
+                this.localVariableNames.add(null);
+                this.localVariableTypes.add(null); // Dummy type for the wide slot
+                index = this.localVariableNames.size() - 2;
+            } else {
+                String original = this.localVariableTypes.get(index);
+                if (original != "long" && original != "double") {
+                    throw new IllegalArgumentException("Local variable '" + variableName + "' is not of wide type '" + original + "'.");
+                }
+                this.localVariableTypes.set(index, requiredType);
+            }
+            return index;
+        }
+
+        @Info(
+            """
+            Add an `iload` instruction to the method.
+
+            The `iload` instruction loads an integer from a local variable onto the operand stack.
+
+            **Operand Stack:** (*i* is the loaded integer.)
+
+            { ... }  
+            → { ... , *i* }
+
+            @param variableName - The name of the local variable to load the integer from.
+                Use `this` for instance methods to refer to the current object (if this method is an instance method).
+                Parameters names are `arg0`, `arg1`, etc. at default.
+            @returns This `MethodCodeBuilder` instance.
+            @throws IllegalArgumentException if the local variable does not exist or is not of type `int`.
+            """
+        )
+        public MethodCodeBuilder loadInt(String variableName) {
+            int index = this.getVariableIndexOrThrow(variableName, "int");
+            this.methodVisitor.visitVarInsn(Opcodes.ILOAD, index);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `lload` instruction to the method.
+
+            The `lload` instruction loads a long from a local variable onto the operand stack.
+
+            **Operand Stack:** (*l* is the loaded long and "---" is the second slot taken.)
+
+            { ... }  
+            → { ... , *l* , --- }
+
+            @param variableName - The name of the local variable to load the long from.
+                Use `this` for instance methods to refer to the current object (if this method is an instance method).
+                Parameters names are `arg0`, `arg1`, etc. at default.
+            @returns This `MethodCodeBuilder` instance.
+            @throws IllegalArgumentException if the local variable does not exist or is not of type `long`.
+            """
+        )
+        public MethodCodeBuilder loadLong(String variableName) {
+            int index = this.getVariableIndexOrThrow(variableName, "long");
+            this.methodVisitor.visitVarInsn(Opcodes.LLOAD, index);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `fload` instruction to the method.
+
+            The `fload` instruction loads a float from a local variable onto the operand stack.
+
+            **Operand Stack:** (*f* is the loaded float.)
+
+            { ... }  
+            → { ... , *f* }
+
+            @param variableName - The name of the local variable to load the float from.
+                Use `this` for instance methods to refer to the current object (if this method is an instance method).
+                Parameters names are `arg0`, `arg1`, etc. at default.
+            @returns This `MethodCodeBuilder` instance.
+            @throws IllegalArgumentException if the local variable does not exist or is not of type `float`.
+            """
+        )
+        public MethodCodeBuilder loadFloat(String variableName) {
+            int index = this.getVariableIndexOrThrow(variableName, "float");
+            this.methodVisitor.visitVarInsn(Opcodes.FLOAD, index);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `dload` instruction to the method.
+
+            The `dload` instruction loads a double from a local variable onto the operand stack.
+
+            **Operand Stack:** (*d* is the loaded double and "---" is the second slot taken.)
+
+            { ... }  
+            → { ... , *d* , --- }
+
+            @param variableName - The name of the local variable to load the double from.
+                Use `this` for instance methods to refer to the current object (if this method is an instance method).
+                Parameters names are `arg0`, `arg1`, etc. at default.
+            @returns This `MethodCodeBuilder` instance.
+            @throws IllegalArgumentException if the local variable does not exist or is not of type `double`.
+            """
+        )
+        public MethodCodeBuilder loadDouble(String variableName) {
+            int index = this.getVariableIndexOrThrow(variableName, "double");
+            this.methodVisitor.visitVarInsn(Opcodes.DLOAD, index);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `aload` instruction to the method.
+
+            The `aload` instruction loads an object reference from a local variable onto the operand stack.
+
+            **Operand Stack:** (*object* is the loaded object reference.)
+
+            { ... }  
+            → { ... , *object* }
+
+            @param variableName - The name of the local variable to load the object from.
+                Use `this` for instance methods to refer to the current object (if this method is an instance method).
+                Parameters names are `arg0`, `arg1`, etc. at default.
+            @param requiredType - The class name of the object.
+            @returns This `MethodCodeBuilder` instance.
+            @throws IllegalArgumentException if the local variable does not exist or is not of the required type.
+            """
+        )
+        public MethodCodeBuilder loadObject(String variableName, String requiredType) {
+            int index = this.getVariableIndexOrThrow(variableName, requiredType);
+            this.methodVisitor.visitVarInsn(Opcodes.ALOAD, index);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `aload` instruction to the method. And do not check whether the type is valid.
+
+            The `aload` instruction loads an object reference from a local variable onto the operand stack.
+
+            **Operand Stack:** (*object* is the loaded object reference.)
+
+            { ... }  
+            → { ... , *object* }
+
+            @param variableName - The name of the local variable to load the object from.
+                Use `this` for instance methods to refer to the current object (if this method is an instance method).
+                Parameters names are `arg0`, `arg1`, etc. at default.
+            @returns This `MethodCodeBuilder` instance.
+            @throws IllegalArgumentException if the local variable does not exist or is not of an object type.)
+            """
+        )
+        public MethodCodeBuilder loadObject(String variableName) {
+            int index = this.getVariableIndexOrThrow(variableName);
+            this.methodVisitor.visitVarInsn(Opcodes.ALOAD, index);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `istore` instruction to the method.
+
+            The `istore` instruction stores an integer from the operand stack into a local variable.
+
+            **Note:** All *store* instructions *overrides* the variable type.
+
+            **Operand Stack:** (*i* is the stored integer.)
+
+            { ... , *i* }  
+            → { ... }
+
+            @param variableName - The name of the local variable to store the integer into.
+                Use `this` for instance methods to refer to the current object (if this method is an instance method).
+                Parameters names are `arg0`, `arg1`, etc. at default. (Change them using `parameterNames(String[])` method before calling `code()`.)
+                If the local variable does not exist, it will be created.
+            @returns This `MethodCodeBuilder` instance.
+            @throws `IllegalArgumentException` - if the local variable exists but is not of type `int`.
+            """
+        )
+        public MethodCodeBuilder storeInt(String variableName) {
+            int index = this.getVariableIndexOrDeclare(variableName, "int");
+            this.methodVisitor.visitVarInsn(Opcodes.ISTORE, index);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `lstore` instruction to the method.
+
+            The `lstore` instruction stores a long from the operand stack into a local variable.
+
+            **Note:** All *store* instructions *overrides* the variable type.
+
+            **Operand Stack:** (*l* is the stored long and "---" is the second slot taken.)
+
+            { ... , *l* , --- }  
+            → { ... }
+
+            @param variableName - The name of the local variable to store the long into.
+                If the local variable does not exist, it will be created.
+            @returns This `MethodCodeBuilder` instance.
+            @throws IllegalArgumentException if the local variable exists but is not of type `long`.
+            """
+        )
+        public MethodCodeBuilder storeLong(String variableName) {
+            int index = this.getVariableIndexOrDeclareWide(variableName, "long");
+            this.methodVisitor.visitVarInsn(Opcodes.LSTORE, index);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `fstore` instruction to the method.
+
+            The `fstore` instruction stores a float from the operand stack into a local variable.
+
+            **Note:** All *store* instructions *overrides* the variable type.
+
+            **Operand Stack:** (*f* is the stored float.)
+
+            { ... , *f* }  
+            → { ... }
+
+            @param variableName - The name of the local variable to store the float into.
+                If the local variable does not exist, it will be created.
+            @returns This `MethodCodeBuilder` instance.
+            @throws IllegalArgumentException if the local variable exists but is not of type `float`.
+            """
+        )
+        public MethodCodeBuilder storeFloat(String variableName) {
+            int index = this.getVariableIndexOrDeclare(variableName, "float");
+            this.methodVisitor.visitVarInsn(Opcodes.FSTORE, index);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `dstore` instruction to the method.
+
+            The `dstore` instruction stores a double from the operand stack into a local variable.
+
+            **Note:** All *store* instructions *overrides* the variable type.
+
+            **Operand Stack:** (*d* is the stored double and "---" is the second slot taken.)
+
+            { ... , *d* , --- }  
+            → { ... }
+
+            @param variableName - The name of the local variable to store the double into.
+                If the local variable does not exist, it will be created.
+            @returns This `MethodCodeBuilder` instance.
+            @throws IllegalArgumentException if the local variable exists but is not of type `double`.
+            """
+        )
+        public MethodCodeBuilder storeDouble(String variableName) {
+            int index = this.getVariableIndexOrDeclareWide(variableName, "double");
+            this.methodVisitor.visitVarInsn(Opcodes.DSTORE, index);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `astore` instruction to the method.
+
+            The `astore` instruction stores an object reference from the operand stack into a local variable.
+
+            **Note:** All *store* instructions *overrides* the variable type.
+
+            **Operand Stack:** (*object* is the stored object reference.)
+
+            { ... , *object* }  
+            → { ... }
+
+            @param variableName - The name of the local variable to store the object into.
+            @param variableType - The class name of the object stored.
+            @returns This `MethodCodeBuilder` instance.
+            @throws IllegalArgumentException if the local variable exists but is not of an object type.
+            """
+        )
+        public MethodCodeBuilder storeObject(String variableName, String variableType) {
+            int index = this.getVariableIndexOrDeclare(variableName, variableType);
+            this.methodVisitor.visitVarInsn(Opcodes.ASTORE, index);
             return this;
         }
 
@@ -569,7 +947,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuidler pop() {
+        public MethodCodeBuilder pop() {
             this.methodVisitor.visitInsn(Opcodes.POP);
             return this;
         }
@@ -593,7 +971,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuidler pop2() {
+        public MethodCodeBuilder pop2() {
             this.methodVisitor.visitInsn(Opcodes.POP2);
             return this;
         }
@@ -613,7 +991,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuidler returnInt() {
+        public MethodCodeBuilder returnInt() {
             this.methodVisitor.visitInsn(Opcodes.IRETURN);
             return this;
         }
@@ -633,7 +1011,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuidler returnLong() {
+        public MethodCodeBuilder returnLong() {
             this.methodVisitor.visitInsn(Opcodes.LRETURN);
             return this;
         }
@@ -653,7 +1031,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuidler returnFloat() {
+        public MethodCodeBuilder returnFloat() {
             this.methodVisitor.visitInsn(Opcodes.FRETURN);
             return this;
         }
@@ -673,7 +1051,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuidler returnDouble() {
+        public MethodCodeBuilder returnDouble() {
             this.methodVisitor.visitInsn(Opcodes.DRETURN);
             return this;
         }
@@ -693,7 +1071,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuidler returnObject() {
+        public MethodCodeBuilder returnObject() {
             this.methodVisitor.visitInsn(Opcodes.ARETURN);
             return this;
         }
@@ -713,7 +1091,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuidler returnVoid() {
+        public MethodCodeBuilder returnVoid() {
             this.methodVisitor.visitInsn(Opcodes.RETURN);
             return this;
         }
