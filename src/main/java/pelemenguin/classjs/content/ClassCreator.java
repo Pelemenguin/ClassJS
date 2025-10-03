@@ -5,7 +5,7 @@ import org.objectweb.asm.Opcodes;
 
 import dev.latvian.mods.kubejs.typings.Info;
 import dev.latvian.mods.kubejs.util.ConsoleJS;
-import pelemenguin.classjs.library.ClassJSClassLoader;
+import pelemenguin.util.ClassJSClassLoader;
 
 @Info("A class for Java classes creation.")
 public class ClassCreator {
@@ -14,7 +14,7 @@ public class ClassCreator {
 
     private String packagePrefix = "generated.kubejs"; // Fallback value
     private String name;
-    private ClassWriter classWriter;
+    protected ClassWriter classWriter;
 
     private int version = Opcodes.V17;
     private int access = Opcodes.ACC_PUBLIC | Opcodes.ACC_SUPER;
@@ -299,8 +299,30 @@ public class ClassCreator {
         return this;
     }
 
-    public Class<?> defineClass() {
+    @Info(
+        """
+        Create a new method.
+
+        @param name - The method name.
+        @param paramTypes - The parameter types. Use full qualified name with `.` seperated.
+            For example, `int`, `java.lang.Object`(not just `Object`), `java.lang.String`.
+        @param returnType - The return type. Same as `paramTypes`. Use `void` for no return value.
+        """
+    )
+    public MethodCreator createMethod(String name, String[] paramTypes, String returnType) {
+        return new MethodCreator(this, name, paramTypes, returnType);
+    }
+
+    @Info(
+        """
+        Define the class and get the created class.
+
+        @returns The created class.
+        """
+    )
+    public Object defineClass() {
         this.classWriter.visit(this.version, this.access, this.getInternalName(), null, "java/lang/Object", null);
+        this.classWriter.visitEnd();
         return ClassJSClassLoader.INSTANCE.defineClass(this.getClassName(), this.classWriter.toByteArray());
     }
 
