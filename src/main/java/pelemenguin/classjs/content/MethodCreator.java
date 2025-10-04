@@ -1,6 +1,5 @@
 package pelemenguin.classjs.content;
 
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 
 import org.objectweb.asm.MethodVisitor;
