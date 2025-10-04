@@ -1246,6 +1246,165 @@ public class MethodCreator {
 
         @Info(
             """
+            Add a `dup` instruction to the method.
+
+            The `dup` instruction duplicates the top value on the operand stack.
+
+            **Note:** This instruction can only be used to duplicate values that are neither longs nor doubles.
+                For duplicating longs and doubles, use the `dup2` instruction instead.
+
+            **Operand Stack:** (*v* is the duplicated value.)
+
+            { ... , *v* } → { ... , *v* , *v* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder duplicate() {
+            this.methodVisitor.visitInsn(Opcodes.DUP);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `dup_x1` instruction to the method.
+
+            The `dup_x1` instruction duplicates the top value on the operand stack and inserts it two values down.
+
+            **Operand Stack:** (*v1* is the duplicated value, and *v2* is the value below it.
+                Neither *v1* nor *v2* can be a long or a double.)
+
+            { ... , *v2* , *v1* } → { ... , *v1* , *v2* , *v1* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder duplicateX1() {
+            this.methodVisitor.visitInsn(Opcodes.DUP_X1);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `dup_x2` instruction to the method.
+
+            The `dup_x2` instruction duplicates the top value on the operand stack and inserts it two or three values down.
+
+            **Operand Stack:**
+
+            - If the second value is a long or double: (*v1* is the duplicated value, *v2* is the long or double, and "---" is the second slot taken.)
+              - { ... , *v2* , --- , *v1* } → { ... , *v1* , *v2* , --- , *v1* }
+
+            - Otherwise: (*v1*, *v2*, and *v3* are the values, and none of them is a long or a double.)
+              - { ... , *v3* , *v2* , *v1* } → { ... , *v1* , *v3* , *v2* , *v1* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder duplicateX2() {
+            this.methodVisitor.visitInsn(Opcodes.DUP_X2);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `dup2` instruction to the method.
+
+            The `dup2` instruction duplicates the top one or two values on the operand stack.
+
+            **Operand Stack:**
+
+            - If the top value is a long or double: (*v1* is the duplicated long or double, and "---" is the second slot taken.)
+              - { ... , *v1* , --- } → { ... , *v1* , --- , *v1* , --- }
+
+            - Otherwise: (*v1* and *v2* are the duplicated values and neither of them is a long or a double.)
+              - { ... , *v2* , *v1* } → { ... , *v2* , *v1* , *v2* , *v1* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder duplicate2() {
+            this.methodVisitor.visitInsn(Opcodes.DUP2);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `dup2_x1` instruction to the method.
+
+            The `dup2_x1` instruction duplicates the top one or two values on the operand stack and inserts them two or three values down.
+
+            **Operand Stack:**
+
+            - If the top value is a long or double: (*v1* is the duplicated long or double, *v2* is the value below it, and "---" is the second slot taken.)
+              - { ... , *v2* , *v1* , --- } → { ... , *v1* , --- , *v2* , *v1* , --- }
+
+            - Otherwise: (*v1* and *v2* are the duplicated values, *v3* is the value below them, and none of them is a long or a double.)
+              - { ... , *v3* , *v2* , *v1* } → { ... , *v2* , *v1* , *v3* , *v2* , *v1* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder duplicate2X1() {
+            this.methodVisitor.visitInsn(Opcodes.DUP2_X1);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `dup2_x2` instruction to the method.
+
+            The `dup2_x2` instruction duplicates the top one or two values on the operand stack and inserts them two, three, or four values down.
+
+            **Operand Stack:**
+
+            - If the top value is a long or double and the second value is also a long or double:
+                (*v1* is the duplicated long or double, *v2* is the long or double below it, and "---" are the second slots taken.)
+                - { ... , *v2* , --- , *v1* , --- } → { ... , *v1* , --- , *v2* , --- , *v1* , --- }
+
+            - If the top value is a long or double and the second value is not:
+                (*v1* is the duplicated long or double, *v2* is the value below it, and "---" is the second slot taken.)
+                - { ... , *v2* , *v1* , --- } → { ... , *v1* , --- , *v2* , *v1* , --- }
+
+            - If neither of the top two values is a long or double and the third value is a long or double:
+                (*v1* and *v2* are the duplicated values, *v3* is the long or double below them, and "---" is the second slot taken.)
+                - { ... , *v3* , --- , *v2* , *v1* } → { ... , *v2* , *v1* , *v3* , --- , *v2* , *v1* }
+
+            - If none of the top three values is a long or double:
+                (*v1*, *v2*, and *v3* are the values, and none of them is a long or a double.)
+                - { ... , *v4* , *v3* , *v2* , *v1* } → { ... , *v2* , *v1* , *v4* , *v3* , *v2* , *v1* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder duplicate2X2() {
+            this.methodVisitor.visitInsn(Opcodes.DUP2_X2);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `swap` instruction to the method.
+
+            The `swap` instruction swaps the top two values on the operand stack.
+
+            **Note:** This instruction can only be used to swap values that are neither longs nor doubles.
+                For swapping longs and doubles, you need to use a combination of `dup` and `pop` instructions.
+
+            **Operand Stack:** (*v1* and *v2* are the values to be swapped, and neither of them is a long or a double.)
+
+            { ... , *v2* , *v1* } → { ... , *v1* , *v2* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder swap() {
+            this.methodVisitor.visitInsn(Opcodes.SWAP);
+            return this;
+        }
+
+        @Info(
+            """
             Add a `ireturn` instruction to the method.
 
             The `ireturn` instruction is used to return an integer from a method.
