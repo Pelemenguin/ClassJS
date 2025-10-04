@@ -781,6 +781,166 @@ public class MethodCreator {
 
         @Info(
             """
+            Add an `iaload` instruction to the method.
+
+            The `iaload` instruction loads an integer from an integer array.
+
+            **Operand Stack:** (*arrayref* is the reference to the integer array,
+                and *index* is the index of the element to load.
+                *i* is the loaded integer from the array.)
+
+            { ... , *arrayref* , *index* } → { ... , *i* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder getIntFromArray() {
+            this.methodVisitor.visitInsn(Opcodes.IALOAD);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `laload` instruction to the method.
+
+            The `laload` instruction loads a long from a long array.
+
+            **Operand Stack:** (*arrayref* is the reference to the long array,
+                and *index* is the index of the element to load.
+                *l* is the loaded long from the array and "---" is the second slot taken.)
+
+            { ... , *arrayref* , *index* } → { ... , *l* , --- }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder getLongFromArray() {
+            this.methodVisitor.visitInsn(Opcodes.LALOAD);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `faload` instruction to the method.
+
+            The `faload` instruction loads a float from a float array.
+
+            **Operand Stack:** (*arrayref* is the reference to the float array,
+                and *index* is the index of the element to load.
+                *f* is the loaded float from the array.)
+
+            { ... , *arrayref* , *index* } → { ... , *f* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder getFloatFromArray() {
+            this.methodVisitor.visitInsn(Opcodes.FALOAD);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `daload` instruction to the method.
+
+            The `daload` instruction loads a double from a double array.
+
+            **Operand Stack:** (*arrayref* is the reference to the double array,
+                and *index* is the index of the element to load.
+                *d* is the loaded double from the array and "---" is the second slot taken.)
+
+            { ... , *arrayref* , *index* } → { ... , *d* , --- }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder getDoubleFromArray() {
+            this.methodVisitor.visitInsn(Opcodes.DALOAD);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `aaload` instruction to the method.
+
+            The `aaload` instruction loads an object reference from an object array.
+
+            **Operand Stack:** (*arrayref* is the reference to the object array,
+                and *index* is the index of the element to load.
+                *object* is the loaded object reference from the array.)
+
+            { ... , *arrayref* , *index* } → { ... , *object* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder getObjectFromArray() {
+            this.methodVisitor.visitInsn(Opcodes.AALOAD);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `baload` instruction to the method.
+
+            The `baload` instruction loads a byte or boolean from a byte array.
+
+            **Operand Stack:** (*arrayref* is the reference to the byte array,
+                and *index* is the index of the element to load.
+                *b* is the loaded byte or boolean from the array.)
+
+            { ... , *arrayref* , *index* } → { ... , *b* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder getByteFromArray() {
+            this.methodVisitor.visitInsn(Opcodes.BALOAD);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `caload` instruction to the method.
+
+            The `caload` instruction loads a char from a char array.
+
+            **Operand Stack:** (*arrayref* is the reference to the char array,
+                and *index* is the index of the element to load.
+                *c* is the loaded char from the array.)
+
+            { ... , *arrayref* , *index* } → { ... , *c* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder getCharFromArray() {
+            this.methodVisitor.visitInsn(Opcodes.CALOAD);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `saload` instruction to the method.
+
+            The `saload` instruction loads a short from a short array.
+
+            **Operand Stack:** (*arrayref* is the reference to the short array,
+                and *index* is the index of the element to load.
+                *s* is the loaded short from the array.)
+
+            { ... , *arrayref* , *index* } → { ... , *s* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder getShortFromArray() {
+            this.methodVisitor.visitInsn(Opcodes.SALOAD);
+            return this;
+        }
+
+        @Info(
+            """
             Add an `istore` instruction to the method.
 
             The `istore` instruction stores an integer from the operand stack into a local variable.
@@ -897,6 +1057,160 @@ public class MethodCreator {
         public MethodCodeBuilder storeObject(String variableName) {
             int index = this.getVariableIndexOrDeclare(variableName, 'L');
             this.methodVisitor.visitVarInsn(Opcodes.ASTORE, index);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `iastore` instruction to the method.
+
+            The `iastore` instruction stores an integer into an integer array.
+
+            **Operand Stack:** (*arrayref* is the reference to the integer array,
+                *index* is the index of the element to store, and *value* is the integer to store.)
+
+            { ... , *arrayref* , *index* , *value* } → { ... }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder putIntToArray() {
+            this.methodVisitor.visitInsn(Opcodes.IASTORE);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `lastore` instruction to the method.
+
+            The `lastore` instruction stores a long into a long array.
+
+            **Operand Stack:** (*arrayref* is the reference to the long array,
+                *index* is the index of the element to store, and *value* is the long to store.
+                "---" is the second slot taken by the long.)
+
+            { ... , *arrayref* , *index* , *value* , --- } → { ... }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder putLongToArray() {
+            this.methodVisitor.visitInsn(Opcodes.LASTORE);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `fastore` instruction to the method.
+
+            The `fastore` instruction stores a float into a float array.
+
+            **Operand Stack:** (*arrayref* is the reference to the float array,
+                *index* is the index of the element to store, and *value* is the float to store.)
+
+            { ... , *arrayref* , *index* , *value* } → { ... }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder putFloatToArray() {
+            this.methodVisitor.visitInsn(Opcodes.FASTORE);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `dastore` instruction to the method.
+
+            The `dastore` instruction stores a double into a double array.
+
+            **Operand Stack:** (*arrayref* is the reference to the double array,
+                *index* is the index of the element to store, and *value* is the double to store.
+                "---" is the second slot taken by the double.)
+
+            { ... , *arrayref* , *index* , *value* , --- } → { ... }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder putDoubleToArray() {
+            this.methodVisitor.visitInsn(Opcodes.DASTORE);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `aastore` instruction to the method.
+
+            The `aastore` instruction stores an object reference into an object array.
+
+            **Operand Stack:** (*arrayref* is the reference to the object array,
+                *index* is the index of the element to store, and *value* is the object reference to store.)
+
+            { ... , *arrayref* , *index* , *value* } → { ... }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder putObjectToArray() {
+            this.methodVisitor.visitInsn(Opcodes.AASTORE);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `bastore` instruction to the method.
+
+            The `bastore` instruction stores a byte or boolean into a byte array.
+
+            **Operand Stack:** (*arrayref* is the reference to the byte array,
+                *index* is the index of the element to store, and *value* is the byte or boolean to store.)
+
+            { ... , *arrayref* , *index* , *value* } → { ... }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder putByteToArray() {
+            this.methodVisitor.visitInsn(Opcodes.BASTORE);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `castore` instruction to the method.
+
+            The `castore` instruction stores a char into a char array.
+
+            **Operand Stack:** (*arrayref* is the reference to the char array,
+                *index* is the index of the element to store, and *value* is the char to store.)
+
+            { ... , *arrayref* , *index* , *value* } → { ... }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder putCharToArray() {
+            this.methodVisitor.visitInsn(Opcodes.CASTORE);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `sastore` instruction to the method.
+
+            The `sastore` instruction stores a short into a short array.
+
+            **Operand Stack:** (*arrayref* is the reference to the short array,
+                *index* is the index of the element to store, and *value* is the short to store.)
+
+            { ... , *arrayref* , *index* , *value* } → { ... }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder putShortToArray() {
+            this.methodVisitor.visitInsn(Opcodes.SASTORE);
             return this;
         }
 
@@ -1054,6 +1368,71 @@ public class MethodCreator {
         )
         public MethodCodeBuilder returnVoid() {
             this.methodVisitor.visitInsn(Opcodes.RETURN);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `newarray` instruction to the method to create a new array of a specified primitive type.
+
+            The `newarray` instruction creates a new array of the specified primitive type and pushes its reference onto the operand stack.
+            The size of the array is determined by the integer value on the top of the operand stack.
+
+            Supported primitive types are:
+            - `boolean`
+            - `char`
+            - `float`
+            - `double`
+            - `byte`
+            - `short`
+            - `int`
+            - `long`
+
+            **Operand Stack:** (*count* is the number of elements in the new array, and *arrayref* is the reference to the new array.)
+
+            { ... , *count* } → { ... , *arrayref* }
+
+            @param elementType - The type of elements in the new array. Must be one of the supported primitive types.
+            @returns This `MethodCodeBuilder` instance.
+            @throws IllegalArgumentException if the specified element type is not supported.
+            """
+        )
+        public MethodCodeBuilder newArray(String elementType) {
+            int atype = switch (elementType) {
+                case "boolean" -> 4;
+                case "char" -> 5;
+                case "float" -> 6;
+                case "double" -> 7;
+                case "byte" -> 8;
+                case "short" -> 9;
+                case "int" -> 10;
+                case "long" -> 11;
+                default -> {
+                    throw new IllegalArgumentException("Unsupported array type: " + elementType);
+                }
+            };
+            this.methodVisitor.visitIntInsn(Opcodes.NEWARRAY, atype);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `anewarray` instruction to the method to create a new array of a specified reference type.
+
+            The `anewarray` instruction creates a new array of the specified reference type and pushes its reference onto the operand stack.
+            The size of the array is determined by the integer value on the top of the operand stack.
+
+            **Operand Stack:** (*count* is the number of elements in the new array, and *arrayref* is the reference to the new array.)
+
+            { ... , *count* } → { ... , *arrayref* }
+
+            @param elementType - The name of the class or interface of the elements in the new array (e.g., `java.lang.String` for an array of `String`).
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder newObjectArray(String elementType) {
+            String descriptor = DescriptorUtils.toFieldDescriptor(elementType);
+            this.methodVisitor.visitTypeInsn(Opcodes.ANEWARRAY, descriptor);
             return this;
         }
 
