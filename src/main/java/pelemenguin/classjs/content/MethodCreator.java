@@ -392,6 +392,11 @@ public class MethodCreator {
     public static class MethodCodeBuilder {
 
         private static record CodeLabel(Label label, boolean isDefined) {}
+        private static record ScopeInfo(ScopeType type, String targetLabelName) {
+            public static enum ScopeType {
+                IF, ELSE
+            }
+        }
 
         private MethodCreator parent;
 
@@ -405,7 +410,7 @@ public class MethodCreator {
         private HashMap<String, CodeLabel> labels = new HashMap<>();
 
         private int anonymousLabelCounter = 0;
-        private LinkedList<String> scopes = new LinkedList<>();
+        private LinkedList<ScopeInfo> scopes = new LinkedList<>();
 
         public MethodCodeBuilder(MethodCreator parent) {
             this.parent = parent;
@@ -2411,26 +2416,6 @@ public class MethodCreator {
             return this;
         }
 
-        // @Info(
-        //     """
-        //     Add an `ifne` instruction to the method to jump to a specified label if the top integer on the operand stack is non-zero.
-
-        //     The `ifne` instruction pops the top integer from the operand stack and checks if it is not equal to zero.
-        //     If the value is non-zero, execution jumps to the specified label; otherwise, execution continues with the next instruction.
-
-        //     **Operand Stack:** (*i* is the integer to be checked.)
-
-        //     { ... , *i* } → { ... }
-
-        //     @param labelName - The name of the label to jump to if the condition is met.
-        //     @returns This `MethodCodeBuilder` instance.
-        //     """
-        // )
-        // public MethodCodeBuilder ifNonZero(String labelName) {
-        //     this.methodVisitor.visitJumpInsn(Opcodes.IFNE, this.getOrCreateLabel(labelName));
-        //     return this;
-        // }
-
         @Info(
             """
             Start an `if` statement that checks if the top integer on the operand stack is non-zero.
@@ -2451,7 +2436,7 @@ public class MethodCreator {
             String name = this.newAnonymousLableName();
             Label l = this.getOrCreateLabel(name);
             this.methodVisitor.visitJumpInsn(Opcodes.IFEQ, l);
-            this.scopes.add(name);
+            this.scopes.add(new ScopeInfo(ScopeInfo.ScopeType.IF, name));
             return this;
         }
 
@@ -2475,7 +2460,20 @@ public class MethodCreator {
             String name = this.newAnonymousLableName();
             Label l = this.getOrCreateLabel(name);
             this.methodVisitor.visitJumpInsn(Opcodes.IFNE, l);
-            this.scopes.add(name);
+            this.scopes.add(new ScopeInfo(ScopeInfo.ScopeType.IF, name));
+            return this;
+        }
+
+        public MethodCodeBuilder elseThen() {
+            String labelName = this.newAnonymousLableName();
+            ScopeInfo scopeInfo = this.scopes.pop();
+            if (scopeInfo.type != ScopeInfo.ScopeType.IF) {
+                throw new IllegalStateException("No open if statement to add else.");
+            }
+            this.gotoLabel(labelName);
+            this.labelNext(scopeInfo.targetLabelName);
+            // This label name is not the target of `else`, but the original target of `if`
+            this.scopes.add(new ScopeInfo(ScopeInfo.ScopeType.ELSE, labelName));
             return this;
         }
 
@@ -2495,8 +2493,14 @@ public class MethodCreator {
             if (this.scopes.isEmpty()) {
                 throw new IllegalStateException("No open if statement to close.");
             }
-            String l = this.scopes.pop();
-            this.labelNext(l);
+            ScopeInfo l = this.scopes.pop();
+            if (l.type == ScopeInfo.ScopeType.IF) {
+                this.labelNext(l.targetLabelName);
+            } else if (l.type == ScopeInfo.ScopeType.ELSE) {
+                this.labelNext(l.targetLabelName);
+            } else {
+                throw new IllegalStateException("No open if statement to close.");
+            }
             return this;
         }
 
@@ -2515,7 +2519,8 @@ public class MethodCreator {
             """
         )
         public MethodCodeBuilder gotoLabel(String labelName) {
-            this.methodVisitor.visitJumpInsn(Opcodes.GOTO, this.getOrCreateLabel(labelName));
+            Label label = this.getOrCreateLabel(labelName);
+            this.methodVisitor.visitJumpInsn(Opcodes.GOTO, label);
             return this;
         }
 
