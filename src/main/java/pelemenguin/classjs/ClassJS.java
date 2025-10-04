@@ -7,6 +7,5 @@ public class ClassJS {
     public static final String MOD_ID = "classjs";
 
     public ClassJS() {
-        
     }
 }

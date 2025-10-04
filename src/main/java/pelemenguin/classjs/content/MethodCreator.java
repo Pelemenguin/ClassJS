@@ -1,7 +1,11 @@
 package pelemenguin.classjs.content;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Map.Entry;
 
+import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
@@ -387,6 +391,8 @@ public class MethodCreator {
 
     public static class MethodCodeBuilder {
 
+        private static record CodeLabel(Label label, boolean isDefined) {}
+
         private MethodCreator parent;
 
         private MethodVisitor methodVisitor;
@@ -395,6 +401,11 @@ public class MethodCreator {
         
         // true for long variables, false for short variables
         private ArrayList<Boolean> localVariableTypes = new ArrayList<>();
+
+        private HashMap<String, CodeLabel> labels = new HashMap<>();
+
+        private int anonymousLabelCounter = 0;
+        private LinkedList<String> scopes = new LinkedList<>();
 
         public MethodCodeBuilder(MethodCreator parent) {
             this.parent = parent;
@@ -2363,6 +2374,151 @@ public class MethodCreator {
             return this;
         }
 
+        private Label getOrCreateLabel(String name) {
+            CodeLabel codeLabel = this.labels.get(name);
+            Label result;
+            if (codeLabel == null) {
+                result = new Label();
+                this.labels.put(name, new CodeLabel(result, false));
+            } else {
+                result = codeLabel.label;
+            }
+            return result;
+        }
+
+        private String newAnonymousLableName() {
+            return "<anonymous_" + (this.anonymousLabelCounter ++) + ">";
+        }
+
+        @Info(
+            """
+            Define a label at the current position in the method code.
+
+            This method creates a new label with the specified name and marks the current position in the method code with this label.
+            If a label with the same name already exists, an `IllegalArgumentException` is thrown.
+
+            Later, you can use the `labelName` in {@linkcode ifNonZero}, {@linkcode goto}, etc. to jump here.
+
+            @param labelName - The name of the label to be defined. Must be unique within the method.
+            @returns This `MethodCodeBuilder` instance.
+            @throws `IllegalArgumentException` if a label with the specified name already exists.
+            """
+        )
+        public MethodCodeBuilder labelNext(String labelName) {
+            Label label = this.getOrCreateLabel(labelName);
+            this.labels.put(labelName, new CodeLabel(label, true));
+            this.methodVisitor.visitLabel(label);
+            return this;
+        }
+
+        // @Info(
+        //     """
+        //     Add an `ifne` instruction to the method to jump to a specified label if the top integer on the operand stack is non-zero.
+
+        //     The `ifne` instruction pops the top integer from the operand stack and checks if it is not equal to zero.
+        //     If the value is non-zero, execution jumps to the specified label; otherwise, execution continues with the next instruction.
+
+        //     **Operand Stack:** (*i* is the integer to be checked.)
+
+        //     { ... , *i* } → { ... }
+
+        //     @param labelName - The name of the label to jump to if the condition is met.
+        //     @returns This `MethodCodeBuilder` instance.
+        //     """
+        // )
+        // public MethodCodeBuilder ifNonZero(String labelName) {
+        //     this.methodVisitor.visitJumpInsn(Opcodes.IFNE, this.getOrCreateLabel(labelName));
+        //     return this;
+        // }
+
+        @Info(
+            """
+            Start an `if` statement that checks if the top integer on the operand stack is non-zero.
+
+            The `ifNonZero` method pops the top integer from the operand stack and checks if it is not equal to zero.
+            If the value is non-zero, execution continues with the next instruction; otherwise, execution jumps to the instruction after the corresponding `fi()`.
+
+            This method must be paired with a subsequent call to `fi()` to close the `if` statement.
+
+            **Operand Stack:** (*i* is the integer to be checked.)
+
+            { ... , *i* } → { ... }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder ifNonZero() {
+            String name = this.newAnonymousLableName();
+            Label l = this.getOrCreateLabel(name);
+            this.methodVisitor.visitJumpInsn(Opcodes.IFEQ, l);
+            this.scopes.add(name);
+            return this;
+        }
+
+        @Info(
+            """
+            Start an `if` statement that checks if the top integer on the operand stack is zero.
+
+            The `ifZero` method pops the top integer from the operand stack and checks if it is equal to zero.
+            If the value is zero, execution continues with the next instruction; otherwise, execution jumps to the instruction after the corresponding `fi()`.
+
+            This method must be paired with a subsequent call to `fi()` to close the `if` statement.
+
+            **Operand Stack:** (*i* is the integer to be checked.)
+
+            { ... , *i* } → { ... }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder ifZero() {
+            String name = this.newAnonymousLableName();
+            Label l = this.getOrCreateLabel(name);
+            this.methodVisitor.visitJumpInsn(Opcodes.IFNE, l);
+            this.scopes.add(name);
+            return this;
+        }
+
+        @Info(
+            """
+            Close the most recent `if` statement.
+
+            The `fi()` method marks the end of an `if` statement.
+
+            If there is no open `if` statement to close, an `IllegalStateException` is thrown.
+
+            @returns This `MethodCodeBuilder` instance.
+            @throws `IllegalStateException` if there is no open `if` statement to close.
+            """
+        )
+        public MethodCodeBuilder fi() {
+            if (this.scopes.isEmpty()) {
+                throw new IllegalStateException("No open if statement to close.");
+            }
+            String l = this.scopes.pop();
+            this.labelNext(l);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `goto` instruction to the method to unconditionally jump to a specified label.
+
+            The `goto` instruction causes an unconditional jump to the specified label in the method code.
+
+            **Operand Stack:**
+
+            { ... } → { ... }
+
+            @param labelName - The name of the label to jump to.
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder gotoLabel(String labelName) {
+            this.methodVisitor.visitJumpInsn(Opcodes.GOTO, this.getOrCreateLabel(labelName));
+            return this;
+        }
+
         @Info(
             """
             Add a `ireturn` instruction to the method.
@@ -2555,6 +2711,12 @@ public class MethodCreator {
             """
         )
         public ClassCreator build() {
+            for (Entry<String, CodeLabel> name : this.labels.entrySet()) {
+                if (!name.getValue().isDefined) {
+                    throw new IllegalStateException("Label not defined: " + name.getKey());
+                }
+            }
+
             methodVisitor.visitMaxs(0, 0);
             methodVisitor.visitEnd();
             return this.parent.parent;

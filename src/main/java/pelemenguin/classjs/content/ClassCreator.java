@@ -19,6 +19,8 @@ public class ClassCreator {
     private int version = Opcodes.V17;
     private int access = Opcodes.ACC_PUBLIC | Opcodes.ACC_SUPER;
 
+    private boolean begunMethodCreation = false;
+
     private ClassCreator(String name) {
         if (ClassJSClassLoader.CREATED_CLASSES.containsKey(this.name)) {
             ConsoleJS.STARTUP.warn(
@@ -26,7 +28,7 @@ public class ClassCreator {
             );
         }
         this.name = name;
-        this.classWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
+        this.classWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
     }
 
     @Info(
@@ -95,6 +97,7 @@ public class ClassCreator {
         """
     )
     public ClassCreator version(int version) {
+        this.notBegunMethodCreationOrThrow();
         this.version = version;
         return this;
     }
@@ -110,6 +113,7 @@ public class ClassCreator {
         """
     )
     public ClassCreator toClass() {
+        this.notBegunMethodCreationOrThrow();
         this.access &= ~(Opcodes.ACC_INTERFACE | Opcodes.ACC_ENUM | Opcodes.ACC_MODULE);
         this.access |= Opcodes.ACC_SUPER;
         return this;
@@ -124,6 +128,7 @@ public class ClassCreator {
         """
     )
     public ClassCreator toInterface() {
+        this.notBegunMethodCreationOrThrow();
         this.toClass();
         this.access &= ~(Opcodes.ACC_FINAL | Opcodes.ACC_SUPER);
         this.access |= (Opcodes.ACC_ABSTRACT | Opcodes.ACC_INTERFACE);
@@ -139,6 +144,7 @@ public class ClassCreator {
         """
     )
     public ClassCreator toEnum() {
+        this.notBegunMethodCreationOrThrow();
         this.toClass();
         this.access &= ~Opcodes.ACC_ABSTRACT;
         this.access |= Opcodes.ACC_ENUM;
@@ -154,6 +160,7 @@ public class ClassCreator {
         """
     )
     public ClassCreator toAnnotation() {
+        this.notBegunMethodCreationOrThrow();
         this.toInterface();
         this.access |= Opcodes.ACC_ANNOTATION;
         return this;
@@ -168,6 +175,7 @@ public class ClassCreator {
         """
     )
     public ClassCreator toModule() {
+        this.notBegunMethodCreationOrThrow();
         this.toClass();
         this.access |= Opcodes.ACC_MODULE;
         return this;
@@ -182,6 +190,7 @@ public class ClassCreator {
         """
     )
     public ClassCreator toPublic() {
+        this.notBegunMethodCreationOrThrow();
         this.access |= Opcodes.ACC_PUBLIC;
         return this;
     }
@@ -195,6 +204,7 @@ public class ClassCreator {
         """
     )
     public ClassCreator notPublic() {
+        this.notBegunMethodCreationOrThrow();
         this.access &= ~Opcodes.ACC_PUBLIC;
         return this;
     }
@@ -210,6 +220,7 @@ public class ClassCreator {
         """
     )
     public ClassCreator toFinal() {
+        this.notBegunMethodCreationOrThrow();
         this.access &= ~Opcodes.ACC_ABSTRACT;
         this.access |= Opcodes.ACC_FINAL;
         return this;
@@ -224,6 +235,7 @@ public class ClassCreator {
         """
     )
     public ClassCreator notFinal() {
+        this.notBegunMethodCreationOrThrow();
         this.access &= ~Opcodes.ACC_FINAL;
         return this;
     }
@@ -240,6 +252,7 @@ public class ClassCreator {
         """
     )
     public ClassCreator notInterface() {
+        this.notBegunMethodCreationOrThrow();
         this.access &= ~(Opcodes.ACC_INTERFACE | Opcodes.ACC_ABSTRACT);
         return this;
     }
@@ -255,6 +268,7 @@ public class ClassCreator {
         """
     )
     public ClassCreator toAbstract() {
+        this.notBegunMethodCreationOrThrow();
         this.access &= ~Opcodes.ACC_FINAL;
         this.access |= Opcodes.ACC_ABSTRACT;
         return this;
@@ -269,6 +283,7 @@ public class ClassCreator {
         """
     )
     public ClassCreator notAbstract() {
+        this.notBegunMethodCreationOrThrow();
         this.access &= ~Opcodes.ACC_ABSTRACT;
         return this;
     }
@@ -282,6 +297,7 @@ public class ClassCreator {
         """
     )
     public ClassCreator toSynthetic() {
+        this.notBegunMethodCreationOrThrow();
         this.access |= Opcodes.ACC_SYNTHETIC;
         return this;
     }
@@ -295,8 +311,21 @@ public class ClassCreator {
         """
     )
     public ClassCreator notSynthetic() {
+        this.notBegunMethodCreationOrThrow();
         this.access &= ~Opcodes.ACC_SYNTHETIC;
         return this;
+    }
+
+    private void notBegunMethodCreationOrThrow() {
+        if (this.begunMethodCreation) {
+            throw new IllegalStateException("Cannot change class info after beginning method creation.");
+        }
+    }
+    
+    private void beginMethodCreation() {
+        if (this.begunMethodCreation) return;
+        this.begunMethodCreation = true;
+        this.classWriter.visit(this.version, this.access, this.getInternalName(), null, "java/lang/Object", null);
     }
 
     @Info(
@@ -310,6 +339,7 @@ public class ClassCreator {
         """
     )
     public MethodCreator createMethod(String name, String[] paramTypes, String returnType) {
+        this.beginMethodCreation();
         return new MethodCreator(this, name, paramTypes, returnType);
     }
 
@@ -321,7 +351,6 @@ public class ClassCreator {
         """
     )
     public Object defineClass() {
-        this.classWriter.visit(this.version, this.access, this.getInternalName(), null, "java/lang/Object", null);
         this.classWriter.visitEnd();
         return ClassJSClassLoader.INSTANCE.defineClass(this.getClassName(), this.classWriter.toByteArray());
     }
