@@ -1,5 +1,6 @@
 package pelemenguin.classjs.content;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 
 import org.objectweb.asm.MethodVisitor;
@@ -473,10 +474,10 @@ public class MethodCreator {
             Add an instruction to push an integer constant onto the operand stack.
 
             The method optimizes the instruction based on the value of the integer:
-            - For values between -1 and 5 (inclusive), it uses the `ICONST_<i>` instructions.
-            - For values between -128 and 127 (inclusive), it uses the `BIPUSH` instruction.
-            - For values between -32,768 and 32,767 (inclusive), it uses the `SIPUSH` instruction.
-            - For all other values, it uses the `LDC` instruction.
+            - For values between -1 and 5 (inclusive), it uses the `iconst_<i>` instructions.
+            - For values between -128 and 127 (inclusive), it uses the `bipush` instruction.
+            - For values between -32,768 and 32,767 (inclusive), it uses the `sipush` instruction.
+            - For all other values, it uses the `ldc` instruction.
 
             **Operand Stack:** (*i* is the pushed integer constant.)
 
@@ -504,8 +505,8 @@ public class MethodCreator {
             Add an instruction to push a long constant onto the operand stack.
 
             The method optimizes the instruction based on the value of the long:
-            - For values 0L and 1L, it uses the `LCONST_0` and `LCONST_1` instructions respectively.
-            - For all other values, it uses the `LDC` instruction.
+            - For values 0L and 1L, it uses the `lconst_0` and `lconst_1` instructions respectively.
+            - For all other values, it uses the `ldc` instruction.
 
             **Operand Stack:** (*l* is the pushed long constant. "---" is the second slot taken by the long.)
 
@@ -531,8 +532,8 @@ public class MethodCreator {
             Add an instruction to push a float constant onto the operand stack.
 
             The method optimizes the instruction based on the value of the float:
-            - For values 0.0f, 1.0f, and 2.0f, it uses the `FCONST_0`, `FCONST_1`, and `FCONST_2` instructions respectively.
-            - For all other values, it uses the `LDC` instruction.
+            - For values 0.0f, 1.0f, and 2.0f, it uses the `fconst_0`, `fconst_1`, and `fconst_2` instructions respectively.
+            - For all other values, it uses the `ldc` instruction.
 
             **Operand Stack:** (*f* is the pushed float constant.)
 
@@ -560,8 +561,8 @@ public class MethodCreator {
             Add an instruction to push a double constant onto the operand stack.
 
             The method optimizes the instruction based on the value of the double:
-            - For values 0.0 and 1.0, it uses the `DCONST_0` and `DCONST_1` instructions respectively.
-            - For all other values, it uses the `LDC` instruction.
+            - For values 0.0 and 1.0, it uses the `dconst_0` and `dconst_1` instructions respectively.
+            - For all other values, it uses the `ldc` instruction.
 
             **Operand Stack:** (*d* is the pushed double constant. "---" is the second slot taken by the double.)
 
@@ -586,7 +587,7 @@ public class MethodCreator {
             """
             Add an instruction to push a string constant onto the operand stack.
 
-            The method uses the `LDC` instruction to push the string.
+            The method uses the `ldc` instruction to push the string.
 
             **Operand Stack:** (*s* is the pushed string constant.)
 
@@ -1400,6 +1401,697 @@ public class MethodCreator {
         )
         public MethodCodeBuilder swap() {
             this.methodVisitor.visitInsn(Opcodes.SWAP);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `iadd` instruction to the method.
+
+            The `iadd` instruction adds the top two integers on the operand stack.
+
+            **Operand Stack:** (*i1* and *i2* are the integers to be added, and *result* is *i1* + *i2*.)
+
+            { ... , *i1* , *i2* } → { ... , *result* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder intAdd() {
+            this.methodVisitor.visitInsn(Opcodes.IADD);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `ladd` instruction to the method.
+
+            The `ladd` instruction adds the top two longs on the operand stack.
+
+            **Operand Stack:** (*l1* and *l2* are the longs to be added, "---" are the second slots taken,
+                and *result* is *l1* + *l2*.)
+
+            { ... , *l1* , --- , *l2* , --- } → { ... , *result* , --- }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder longAdd() {
+            this.methodVisitor.visitInsn(Opcodes.LADD);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `fadd` instruction to the method.
+
+            The `fadd` instruction adds the top two floats on the operand stack.
+
+            **Operand Stack:** (*f1* and *f2* are the floats to be added, and *result* is *f1* + *f2*.)
+
+            { ... , *f1* , *f2* } → { ... , *result* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder floatAdd() {
+            this.methodVisitor.visitInsn(Opcodes.FADD);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `dadd` instruction to the method.
+
+            The `dadd` instruction adds the top two doubles on the operand stack.
+
+            **Operand Stack:** (*d1* and *d2* are the doubles to be added, "---" are the second slots taken,
+                and *result* is *d1* + *d2*.)
+
+            { ... , *d1* , --- , *d2* , --- } → { ... , *result* , --- }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder doubleAdd() {
+            this.methodVisitor.visitInsn(Opcodes.DOUBLE);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `isub` instruction to the method.
+
+            The `isub` instruction subtracts the top integer on the operand stack from the second top integer.
+
+            **Operand Stack:** (*i1* and *i2* are the integers to be subtracted, and *result* is *i1* - *i2*.)
+
+            { ... , *i1* , *i2* } → { ... , *result* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder intSub() {
+            this.methodVisitor.visitInsn(Opcodes.ISUB);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `lsub` instruction to the method.
+
+            The `lsub` instruction subtracts the top long on the operand stack from the second top long.
+
+            **Operand Stack:** (*l1* and *l2* are the longs to be subtracted, "---" are the second slots taken,
+                and *result* is *l1* - *l2*.)
+
+            { ... , *l1* , --- , *l2* , --- } → { ... , *result* , --- }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder longSub() {
+            this.methodVisitor.visitInsn(Opcodes.LSUB);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `fsub` instruction to the method.
+
+            The `fsub` instruction subtracts the top float on the operand stack from the second top float.
+
+            **Operand Stack:** (*f1* and *f2* are the floats to be subtracted, and *result* is *f1* - *f2*.)
+
+            { ... , *f1* , *f2* } → { ... , *result* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder floatSub() {
+            this.methodVisitor.visitInsn(Opcodes.FSUB);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `dsub` instruction to the method.
+
+            The `dsub` instruction subtracts the top double on the operand stack from the second top double.
+
+            **Operand Stack:** (*d1* and *d2* are the doubles to be subtracted, "---" are the second slots taken,
+                and *result* is *d1* - *d2*.)
+
+            { ... , *d1* , --- , *d2* , --- } → { ... , *result* , --- }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder doubleSub() {
+            this.methodVisitor.visitInsn(Opcodes.DSUB);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `imul` instruction to the method.
+
+            The `imul` instruction multiplies the top two integers on the operand stack.
+
+            **Operand Stack:** (*i1* and *i2* are the integers to be multiplied, and *result* is *i1* \\* *i2*.)
+
+            { ... , *i1* , *i2* } → { ... , *result* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder intMul() {
+            this.methodVisitor.visitInsn(Opcodes.IMUL);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `lmul` instruction to the method.
+
+            The `lmul` instruction multiplies the top two longs on the operand stack.
+
+            **Operand Stack:** (*l1* and *l2* are the longs to be multiplied, "---" are the second slots taken,
+                and *result* is *l1* \\* *l2*.)
+
+            { ... , *l1* , --- , *l2* , --- } → { ... , *result* , --- }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder longMul() {
+            this.methodVisitor.visitInsn(Opcodes.LMUL);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `fmul` instruction to the method.
+
+            The `fmul` instruction multiplies the top two floats on the operand stack.
+
+            **Operand Stack:** (*f1* and *f2* are the floats to be multiplied, and *result* is *f1* \\* *f2*.)
+
+            { ... , *f1* , *f2* } → { ... , *result* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder floatMul() {
+            this.methodVisitor.visitInsn(Opcodes.FMUL);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `dmul` instruction to the method.
+
+            The `dmul` instruction multiplies the top two doubles on the operand stack.
+
+            **Operand Stack:** (*d1* and *d2* are the doubles to be multiplied, "---" are the second slots taken,
+                and *result* is *d1* \\* *d2*.)
+
+            { ... , *d1* , --- , *d2* , --- } → { ... , *result* , --- }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder doubleMul() {
+            this.methodVisitor.visitInsn(Opcodes.DMUL);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `idiv` instruction to the method.
+
+            The `idiv` instruction divides the second top integer on the operand stack by the top integer.
+
+            **Operand Stack:** (*i1* and *i2* are the integers to be divided, and *result* is *i1* / *i2*.)
+
+            { ... , *i1* , *i2* } → { ... , *result* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder intDiv() {
+            this.methodVisitor.visitInsn(Opcodes.IDIV);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `ldiv` instruction to the method.
+
+            The `ldiv` instruction divides the second top long on the operand stack by the top long.
+
+            **Operand Stack:** (*l1* and *l2* are the longs to be divided, "---" are the second slots taken,
+                and *result* is *l1* / *l2*.)
+
+            { ... , *l1* , --- , *l2* , --- } → { ... , *result* , --- }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder longDiv() {
+            this.methodVisitor.visitInsn(Opcodes.LDIV);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `fdiv` instruction to the method.
+
+            The `fdiv` instruction divides the second top float on the operand stack by the top float.
+
+            **Operand Stack:** (*f1* and *f2* are the floats to be divided, and *result* is *f1* / *f2*.)
+
+            { ... , *f1* , *f2* } → { ... , *result* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder floatDiv() {
+            this.methodVisitor.visitInsn(Opcodes.FDIV);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `ddiv` instruction to the method.
+
+            The `ddiv` instruction divides the second top double on the operand stack by the top double.
+
+            **Operand Stack:** (*d1* and *d2* are the doubles to be divided, "---" are the second slots taken,
+                and *result* is *d1* / *d2*.)
+
+            { ... , *d1* , --- , *d2* , --- } → { ... , *result* , --- }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder doubleDiv() {
+            this.methodVisitor.visitInsn(Opcodes.DDIV);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `irem` instruction to the method.
+
+            The `irem` instruction computes the remainder of the division of the second top integer on the operand stack by the top integer.
+
+            **Operand Stack:** (*i1* and *i2* are the integers, and *result* is *i1* % *i2*.)
+
+            { ... , *i1* , *i2* } → { ... , *result* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder intRem() {
+            this.methodVisitor.visitInsn(Opcodes.IREM);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `lrem` instruction to the method.
+
+            The `lrem` instruction computes the remainder of the division of the second top long on the operand stack by the top long.
+
+            **Operand Stack:** (*l1* and *l2* are the longs, "---" are the second slots taken,
+                and *result* is *l1* % *l2*.)
+
+            { ... , *l1* , --- , *l2* , --- } → { ... , *result* , --- }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder longRem() {
+            this.methodVisitor.visitInsn(Opcodes.LREM);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `frem` instruction to the method.
+
+            The `frem` instruction computes the remainder of the division of the second top float on the operand stack by the top float.
+
+            **Operand Stack:** (*f1* and *f2* are the floats, and *result* is *f1* % *f2*.)
+
+            { ... , *f1* , *f2* } → { ... , *result* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder floatRem() {
+            this.methodVisitor.visitInsn(Opcodes.FREM);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `drem` instruction to the method.
+
+            The `drem` instruction computes the remainder of the division of the second top double on the operand stack by the top double.
+
+            **Operand Stack:** (*d1* and *d2* are the doubles, "---" are the second slots taken,
+                and *result* is *d1* % *d2*.)
+
+            { ... , *d1* , --- , *d2* , --- } → { ... , *result* , --- }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder doubleRem() {
+            this.methodVisitor.visitInsn(Opcodes.DREM);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `ineg` instruction to the method.
+
+            The `ineg` instruction negates the top integer on the operand stack.
+
+            **Operand Stack:** (*i* is the integer to be negated, and *result* is -*i*.)
+
+            { ... , *i* } → { ... , *result* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder intNeg() {
+            this.methodVisitor.visitInsn(Opcodes.INEG);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `lneg` instruction to the method.
+
+            The `lneg` instruction negates the top long on the operand stack.
+
+            **Operand Stack:** (*l* is the long to be negated, "---" is the second slot taken,
+                and *result* is -*l*.)
+
+            { ... , *l* , --- } → { ... , *result* , --- }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder longNeg() {
+            this.methodVisitor.visitInsn(Opcodes.LNEG);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `fneg` instruction to the method.
+
+            The `fneg` instruction negates the top float on the operand stack.
+
+            **Operand Stack:** (*f* is the float to be negated, and *result* is -*f*.)
+
+            { ... , *f* } → { ... , *result* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder floatNeg() {
+            this.methodVisitor.visitInsn(Opcodes.FNEG);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `dneg` instruction to the method.
+
+            The `dneg` instruction negates the top double on the operand stack.
+
+            **Operand Stack:** (*d* is the double to be negated, "---" is the second slot taken,
+                and *result* is -*d*.)
+
+            { ... , *d* , --- } → { ... , *result* , --- }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder doubleNeg() {
+            this.methodVisitor.visitInsn(Opcodes.DNEG);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `ishl` instruction to the method.
+
+            The `ishl` instruction performs a left shift on the top integer on the operand stack by the number of bits specified by the second top integer.
+
+            **Operand Stack:** (*i1* is the integer to be shifted, *i2* is the number of bits to shift,
+                and *result* is *i1* << *i2*.)
+
+            { ... , *i1* , *i2* } → { ... , *result* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder intLShift() {
+            this.methodVisitor.visitInsn(Opcodes.ISHL);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `lshl` instruction to the method.
+
+            The `lshl` instruction performs a left shift on the top long on the operand stack by the number of bits specified by the second top integer.
+
+            **Operand Stack:** (*l* is the long to be shifted, "---" is the second slot taken,
+                *i* is the number of bits to shift, and *result* is *l* << *i*.)
+
+            { ... , *l* , --- , *i* } → { ... , *result* , --- }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder longLShift() {
+            this.methodVisitor.visitInsn(Opcodes.LSHL);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `ishr` instruction to the method.
+
+            The `ishr` instruction performs an arithmetic right shift on the top integer on the operand stack by the number of bits specified by the second top integer.
+
+            **Operand Stack:** (*i1* is the integer to be shifted, *i2* is the number of bits to shift,
+                and *result* is *i1* >> *i2*.)
+
+            { ... , *i1* , *i2* } → { ... , *result* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder intRShift() {
+            this.methodVisitor.visitInsn(Opcodes.ISHR);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `lshr` instruction to the method.
+
+            The `lshr` instruction performs an arithmetic right shift on the top long on the operand stack by the number of bits specified by the second top integer.
+
+            **Operand Stack:** (*l* is the long to be shifted, "---" is the second slot taken,
+                *i* is the number of bits to shift, and *result* is the shifted long.)
+
+            { ... , *l* , --- , *i* } → { ... , *result* , --- }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder longRShift() {
+            this.methodVisitor.visitInsn(Opcodes.LSHR);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `iushr` instruction to the method.
+
+            The `iushr` instruction performs a logical right shift on the top integer on the operand stack by the number of bits specified by the second top integer.
+
+            **Operand Stack:** (*i1* is the integer to be shifted, *i2* is the number of bits to shift,
+                and *result* is *i1* >>> *i2*.)
+
+            { ... , *i1* , *i2* } → { ... , *result* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder intRShiftLogical() {
+            this.methodVisitor.visitInsn(Opcodes.IUSHR);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `lushr` instruction to the method.
+
+            The `lushr` instruction performs a logical right shift on the top long on the operand stack by the number of bits specified by the second top integer.
+
+            **Operand Stack:** (*l* is the long to be shifted, "---" is the second slot taken,
+                *i* is the number of bits to shift, and *result* is *l* >>> *i*.)
+
+            { ... , *l* , --- , *i* } → { ... , *result* , --- }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder longRShiftLogical() {
+            this.methodVisitor.visitInsn(Opcodes.LUSHR);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `iand` instruction to the method.
+
+            The `iand` instruction performs a bitwise AND operation on the top two integers on the operand stack.
+
+            **Operand Stack:** (*i1* and *i2* are the integers to be ANDed, and *result* is *i1* & *i2*.)
+
+            { ... , *i1* , *i2* } → { ... , *result* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder intAnd() {
+            this.methodVisitor.visitInsn(Opcodes.IAND);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `land` instruction to the method.
+
+            The `land` instruction performs a bitwise AND operation on the top two longs on the operand stack.
+
+            **Operand Stack:** (*l1* and *l2* are the longs to be ANDed, "---" are the second slots taken,
+                and *result* is *l1* & *l2*.)
+
+            { ... , *l1* , --- , *l2* , --- } → { ... , *result* , --- }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder longAnd() {
+            this.methodVisitor.visitInsn(Opcodes.LAND);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `ior` instruction to the method.
+
+            The `ior` instruction performs a bitwise OR operation on the top two integers on the operand stack.
+
+            **Operand Stack:** (*i1* and *i2* are the integers to be ORed, and *result* is *i1* | *i2*.)
+
+            { ... , *i1* , *i2* } → { ... , *result* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder intOr() {
+            this.methodVisitor.visitInsn(Opcodes.IOR);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `lor` instruction to the method.
+
+            The `lor` instruction performs a bitwise OR operation on the top two longs on the operand stack.
+
+            **Operand Stack:** (*l1* and *l2* are the longs to be ORed, "---" are the second slots taken,
+                and *result* is *l1* | *l2*.)
+
+            { ... , *l1* , --- , *l2* , --- } → { ... , *result* , --- }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder longOr() {
+            this.methodVisitor.visitInsn(Opcodes.LOR);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `ixor` instruction to the method.
+
+            The `ixor` instruction performs a bitwise XOR operation on the top two integers on the operand stack.
+
+            **Operand Stack:** (*i1* and *i2* are the integers to be XORed, and *result* is *i1* ^ *i2*.)
+
+            { ... , *i1* , *i2* } → { ... , *result* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder IntXor() {
+            this.methodVisitor.visitInsn(Opcodes.IXOR);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `lxor` instruction to the method.
+
+            The `lxor` instruction performs a bitwise XOR operation on the top two longs on the operand stack.
+
+            **Operand Stack:** (*l1* and *l2* are the longs to be XORed, "---" are the second slots taken,
+                and *result* is *l1* ^ *l2*.)
+
+            { ... , *l1* , --- , *l2* , --- } → { ... , *result* , --- }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder longXor() {
+            this.methodVisitor.visitInsn(Opcodes.LXOR);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `iinc` instruction to the method to increment a local integer variable by a specified constant.
+
+            The `iinc` instruction increments the value of a local variable by a constant value.
+            This instruction is specifically designed for local variables of type `int`.
+
+            **Operand Stack:**
+
+            { ... } → { ... }
+
+            @param varIndex - The index of the local variable to be incremented. Must be a non-negative integer.
+            @param increment - The constant value to add to the local variable. Can be positive or negative.
+            @returns This `MethodCodeBuilder` instance.
+            @throws IllegalArgumentException if `varIndex` is negative.
+            """
+        )
+        public MethodCodeBuilder intIncrease(int varIndex, int increment) {
+            this.methodVisitor.visitIincInsn(varIndex, increment);
             return this;
         }
 
