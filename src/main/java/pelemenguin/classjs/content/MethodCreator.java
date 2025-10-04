@@ -2086,11 +2086,280 @@ public class MethodCreator {
             @param varIndex - The index of the local variable to be incremented. Must be a non-negative integer.
             @param increment - The constant value to add to the local variable. Can be positive or negative.
             @returns This `MethodCodeBuilder` instance.
-            @throws IllegalArgumentException if `varIndex` is negative.
             """
         )
         public MethodCodeBuilder intIncrease(int varIndex, int increment) {
             this.methodVisitor.visitIincInsn(varIndex, increment);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `i2l` instruction to the method to convert the top integer on the operand stack to a long.
+
+            The `i2l` instruction converts the top integer on the operand stack to a long and pushes the resulting long back onto the operand stack.
+
+            **Operand Stack:** (*i* is the integer to be converted, and *l* is the resulting long.)
+
+            { ... , *i* } → { ... , *l* , --- }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder intToLong() {
+            this.methodVisitor.visitInsn(Opcodes.I2L);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `i2f` instruction to the method to convert the top integer on the operand stack to a float.
+
+            The `i2f` instruction converts the top integer on the operand stack to a float and pushes the resulting float back onto the operand stack.
+
+            **Operand Stack:** (*i* is the integer to be converted, and *f* is the resulting float.)
+
+            { ... , *i* } → { ... , *f* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder intToFloat() {
+            this.methodVisitor.visitInsn(Opcodes.I2F);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `i2d` instruction to the method to convert the top integer on the operand stack to a double.
+
+            The `i2d` instruction converts the top integer on the operand stack to a double and pushes the resulting double back onto the operand stack.
+
+            **Operand Stack:** (*i* is the integer to be converted, and *d* is the resulting double.)
+
+            { ... , *i* } → { ... , *d* , --- }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder intToDouble() {
+            this.methodVisitor.visitInsn(Opcodes.I2D);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `l2i` instruction to the method to convert the top long on the operand stack to an integer.
+
+            The `l2i` instruction converts the top long on the operand stack to an integer and pushes the resulting integer back onto the operand stack.
+
+            **Operand Stack:** (*l* is the long to be converted, "---" is the second slot taken, and *i* is the resulting integer.)
+
+            { ... , *l* , --- } → { ... , *i* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder longToInt() {
+            this.methodVisitor.visitInsn(Opcodes.L2I);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `l2f` instruction to the method to convert the top long on the operand stack to a float.
+
+            The `l2f` instruction converts the top long on the operand stack to a float and pushes the resulting float back onto the operand stack.
+
+            **Operand Stack:** (*l* is the long to be converted, "---" is the second slot taken, and *f* is the resulting float.)
+
+            { ... , *l* , --- } → { ... , *f* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder longToFloat() {
+            this.methodVisitor.visitInsn(Opcodes.L2F);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `l2d` instruction to the method to convert the top long on the operand stack to a double.
+
+            The `l2d` instruction converts the top long on the operand stack to a double and pushes the resulting double back onto the operand stack.
+
+            **Operand Stack:** (*l* is the long to be converted, "---" is the second slot taken, and *d* is the resulting double.)
+
+            { ... , *l* , --- } → { ... , *d* , --- }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder longToDouble() {
+            this.methodVisitor.visitInsn(Opcodes.L2D);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `f2i` instruction to the method to convert the top float on the operand stack to an integer.
+
+            The `f2i` instruction converts the top float on the operand stack to an integer and pushes the resulting integer back onto the operand stack.
+
+            **Operand Stack:** (*f* is the float to be converted, and *i* is the resulting integer.)
+
+            { ... , *f* } → { ... , *i* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder floatToInt() {
+            this.methodVisitor.visitInsn(Opcodes.F2I);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `f2l` instruction to the method to convert the top float on the operand stack to a long.
+
+            The `f2l` instruction converts the top float on the operand stack to a long and pushes the resulting long back onto the operand stack.
+
+            **Operand Stack:** (*f* is the float to be converted, and *l* is the resulting long.)
+
+            { ... , *f* } → { ... , *l* , --- }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder floatToLong() {
+            this.methodVisitor.visitInsn(Opcodes.F2L);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `f2d` instruction to the method to convert the top float on the operand stack to a double.
+
+            The `f2d` instruction converts the top float on the operand stack to a double and pushes the resulting double back onto the operand stack.
+
+            **Operand Stack:** (*f* is the float to be converted, and *d* is the resulting double.)
+
+            { ... , *f* } → { ... , *d* , --- }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder floatToDouble() {
+            this.methodVisitor.visitInsn(Opcodes.F2D);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `d2i` instruction to the method to convert the top double on the operand stack to an integer.
+
+            The `d2i` instruction converts the top double on the operand stack to an integer and pushes the resulting integer back onto the operand stack.
+
+            **Operand Stack:** (*d* is the double to be converted, "---" is the second slot taken, and *i* is the resulting integer.)
+
+            { ... , *d* , --- } → { ... , *i* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder doubleToInt() {
+            this.methodVisitor.visitInsn(Opcodes.D2I);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `d2l` instruction to the method to convert the top double on the operand stack to a long.
+
+            The `d2l` instruction converts the top double on the operand stack to a long and pushes the resulting long back onto the operand stack.
+
+            **Operand Stack:** (*d* is the double to be converted, "---" is the second slot taken, and *l* is the resulting long.)
+
+            { ... , *d* , --- } → { ... , *l* , --- }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder doubleToLong() {
+            this.methodVisitor.visitInsn(Opcodes.D2L);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `d2f` instruction to the method to convert the top double on the operand stack to a float.
+
+            The `d2f` instruction converts the top double on the operand stack to a float and pushes the resulting float back onto the operand stack.
+
+            **Operand Stack:** (*d* is the double to be converted, "---" is the second slot taken, and *f* is the resulting float.)
+
+            { ... , *d* , --- } → { ... , *f* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder doubleToFloat() {
+            this.methodVisitor.visitInsn(Opcodes.D2F);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `i2b` instruction to the method to convert the top integer on the operand stack to a byte.
+
+            The `i2b` instruction converts the top integer on the operand stack to a byte by truncating it to 8 bits and pushes the resulting byte (as an integer) back onto the operand stack.
+
+            **Operand Stack:** (*i* is the integer to be converted, and *b* is the resulting byte as an integer.)
+
+            { ... , *i* } → { ... , *b* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder intToByte() {
+            this.methodVisitor.visitInsn(Opcodes.I2B);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `i2c` instruction to the method to convert the top integer on the operand stack to a char.
+
+            The `i2c` instruction converts the top integer on the operand stack to a char by truncating it to 16 bits and pushes the resulting char (as an integer) back onto the operand stack.
+
+            **Operand Stack:** (*i* is the integer to be converted, and *c* is the resulting char as an integer.)
+
+            { ... , *i* } → { ... , *c* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder intToChar() {
+            this.methodVisitor.visitInsn(Opcodes.I2C);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `i2s` instruction to the method to convert the top integer on the operand stack to a short.
+
+            The `i2s` instruction converts the top integer on the operand stack to a short by truncating it to 16 bits and pushes the resulting short (as an integer) back onto the operand stack.
+
+            **Operand Stack:** (*i* is the integer to be converted, and *s* is the resulting short as an integer.)
+
+            { ... , *i* } → { ... , *s* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder intToShort() {
+            this.methodVisitor.visitInsn(Opcodes.I2S);
             return this;
         }
 
