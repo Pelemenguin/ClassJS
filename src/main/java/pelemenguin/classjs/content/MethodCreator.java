@@ -393,8 +393,8 @@ public class MethodCreator {
 
         private ArrayList<String> localVariableNames = new ArrayList<>();
         
-        // B C D F I J S Z, and L for refrence type
-        private ArrayList<Character> localVariableTypes = new ArrayList<>();
+        // true for long variables, false for short variables
+        private ArrayList<Boolean> localVariableTypes = new ArrayList<>();
 
         public MethodCodeBuilder(MethodCreator parent) {
             this.parent = parent;
@@ -404,7 +404,7 @@ public class MethodCreator {
             String[] paramTypes = DescriptorUtils.fromMethodDescriptor(this.parent.descriptor);
             if ((this.parent.access & Opcodes.ACC_STATIC) == 0) {
                 this.localVariableNames.add("this");
-                this.localVariableTypes.add('L');
+                this.localVariableTypes.add(false);
             }
 
             String[] tempVarNames = this.parent.paramNames;
@@ -418,23 +418,16 @@ public class MethodCreator {
             }
 
             for (int i = 0; i < paramTypes.length - 1; i ++) {
-                char type = switch (paramTypes[i]) {
-                    case "byte" -> 'B';
-                    case "char" -> 'C';
-                    case "double" -> 'D';
-                    case "float" -> 'F';
-                    case "int" -> 'I';
-                    case "long" -> 'J';
-                    case "short" -> 'S';
-                    case "boolean" -> 'B';
-                    default -> 'L';
+                boolean type = switch (paramTypes[i]) {
+                    case "long", "double" -> true;
+                    default -> false;
                 };
                 String name = tempVarNames[i];
                 this.localVariableNames.add(name);
                 this.localVariableTypes.add(type);
-                if (type == 'J' || type == 'D') {
+                if (type) {
                     this.localVariableNames.add(null);
-                    this.localVariableTypes.add(null); // Dummy type for the wide slot
+                    this.localVariableTypes.add(null);
                 }
             }
         }
@@ -608,10 +601,10 @@ public class MethodCreator {
             return this;
         }
 
-        private int getVariableIndexOrThrow(String variableName, char requiredType) {
+        private int getVariableIndexOrThrow(String variableName, boolean isWideType) {
             int result = getVariableIndexOrThrow(variableName);
-            if (this.localVariableTypes.get(result).equals(requiredType)) return result;
-            throw new IllegalArgumentException("Local variable '" + variableName + "' is not of type '" + requiredType + "', but a '" +
+            if (this.localVariableTypes.get(result).equals(isWideType)) return result;
+            throw new IllegalArgumentException("Local variable '" + variableName + "' is not of type '" + isWideType + "', but a '" +
                 this.localVariableTypes.get(result) +"'.");
         }
 
@@ -623,43 +616,37 @@ public class MethodCreator {
             return index;
         }
 
-        private int getVariableIndexOrDeclare(String variableName, char requiredType) {
-            if (requiredType == 'L' || requiredType == 'D') {
-                throw new IllegalArgumentException("Use getVariableIndexOrDeclareWide for long and double types.");
-            }
+        private int getVariableIndexOrDeclare(String variableName) {
             int index = this.localVariableNames.indexOf(variableName);
             if (index == -1) {
                 this.localVariableNames.add(variableName);
-                this.localVariableTypes.add(requiredType);
+                this.localVariableTypes.add(false);
                 index = this.localVariableNames.size() - 1;
             } else {
-                char original = this.localVariableTypes.get(index);
-                if (original == 'L' || original == 'D') {
-                    throw new IllegalArgumentException("Local variable '" + variableName + "' is of wide type '" + original + "'.");
+                boolean original = this.localVariableTypes.get(index);
+                if (original) {
+                    throw new IllegalArgumentException("Local variable '" + variableName + "' is of wide type.");
                 }
-                this.localVariableTypes.set(index, requiredType);
+                this.localVariableTypes.set(index, false);
             }
             return index;
         }
 
         // Push a null to the second slot of the wide variable into the variable table
-        private int getVariableIndexOrDeclareWide(String variableName, char requiredType) {
-            if (!(requiredType == 'J') && !(requiredType == 'D')) {
-                throw new IllegalArgumentException("Only long and double is allowed, but received " + requiredType);
-            }
+        private int getVariableIndexOrDeclareWide(String variableName) {
             int index = this.localVariableNames.indexOf(variableName);
             if (index == -1) {
                 this.localVariableNames.add(variableName);
-                this.localVariableTypes.add(requiredType);
+                this.localVariableTypes.add(true);
                 this.localVariableNames.add(null);
                 this.localVariableTypes.add(null); // Dummy type for the wide slot
                 index = this.localVariableNames.size() - 2;
             } else {
-                char original = this.localVariableTypes.get(index);
-                if (original != 'L' && original != 'D') {
-                    throw new IllegalArgumentException("Local variable '" + variableName + "' is not of wide type '" + original + "'.");
+                boolean original = this.localVariableTypes.get(index);
+                if (!original) {
+                    throw new IllegalArgumentException("Local variable '" + variableName + "' is not of wide type.");
                 }
-                this.localVariableTypes.set(index, requiredType);
+                this.localVariableTypes.set(index, true);
             }
             return index;
         }
@@ -682,7 +669,7 @@ public class MethodCreator {
             """
         )
         public MethodCodeBuilder loadInt(String variableName) {
-            int index = this.getVariableIndexOrThrow(variableName, 'I');
+            int index = this.getVariableIndexOrThrow(variableName, false);
             this.methodVisitor.visitVarInsn(Opcodes.ILOAD, index);
             return this;
         }
@@ -705,7 +692,7 @@ public class MethodCreator {
             """
         )
         public MethodCodeBuilder loadLong(String variableName) {
-            int index = this.getVariableIndexOrThrow(variableName, 'L');
+            int index = this.getVariableIndexOrThrow(variableName, true);
             this.methodVisitor.visitVarInsn(Opcodes.LLOAD, index);
             return this;
         }
@@ -728,7 +715,7 @@ public class MethodCreator {
             """
         )
         public MethodCodeBuilder loadFloat(String variableName) {
-            int index = this.getVariableIndexOrThrow(variableName, 'F');
+            int index = this.getVariableIndexOrThrow(variableName, false);
             this.methodVisitor.visitVarInsn(Opcodes.FLOAD, index);
             return this;
         }
@@ -751,7 +738,7 @@ public class MethodCreator {
             """
         )
         public MethodCodeBuilder loadDouble(String variableName) {
-            int index = this.getVariableIndexOrThrow(variableName, 'D');
+            int index = this.getVariableIndexOrThrow(variableName, true);
             this.methodVisitor.visitVarInsn(Opcodes.DLOAD, index);
             return this;
         }
@@ -774,7 +761,7 @@ public class MethodCreator {
             """
         )
         public MethodCodeBuilder loadObject(String variableName) {
-            int index = this.getVariableIndexOrThrow(variableName, 'L');
+            int index = this.getVariableIndexOrThrow(variableName, false);
             this.methodVisitor.visitVarInsn(Opcodes.ALOAD, index);
             return this;
         }
@@ -960,7 +947,7 @@ public class MethodCreator {
             """
         )
         public MethodCodeBuilder storeInt(String variableName) {
-            int index = this.getVariableIndexOrDeclare(variableName, 'I');
+            int index = this.getVariableIndexOrDeclare(variableName);
             this.methodVisitor.visitVarInsn(Opcodes.ISTORE, index);
             return this;
         }
@@ -984,7 +971,7 @@ public class MethodCreator {
             """
         )
         public MethodCodeBuilder storeLong(String variableName) {
-            int index = this.getVariableIndexOrDeclareWide(variableName, 'L');
+            int index = this.getVariableIndexOrDeclareWide(variableName);
             this.methodVisitor.visitVarInsn(Opcodes.LSTORE, index);
             return this;
         }
@@ -1008,7 +995,7 @@ public class MethodCreator {
             """
         )
         public MethodCodeBuilder storeFloat(String variableName) {
-            int index = this.getVariableIndexOrDeclare(variableName, 'F');
+            int index = this.getVariableIndexOrDeclare(variableName);
             this.methodVisitor.visitVarInsn(Opcodes.FSTORE, index);
             return this;
         }
@@ -1032,7 +1019,7 @@ public class MethodCreator {
             """
         )
         public MethodCodeBuilder storeDouble(String variableName) {
-            int index = this.getVariableIndexOrDeclareWide(variableName, 'D');
+            int index = this.getVariableIndexOrDeclareWide(variableName);
             this.methodVisitor.visitVarInsn(Opcodes.DSTORE, index);
             return this;
         }
@@ -1055,7 +1042,7 @@ public class MethodCreator {
             """
         )
         public MethodCodeBuilder storeObject(String variableName) {
-            int index = this.getVariableIndexOrDeclare(variableName, 'L');
+            int index = this.getVariableIndexOrDeclare(variableName);
             this.methodVisitor.visitVarInsn(Opcodes.ASTORE, index);
             return this;
         }
