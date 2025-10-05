@@ -322,7 +322,7 @@ public class ClassCreator {
         }
     }
     
-    private void beginMethodCreation() {
+    private void ensureHeadVisited() {
         if (this.begunMethodCreation) return;
         this.begunMethodCreation = true;
         this.classWriter.visit(this.version, this.access, this.getInternalName(), null, "java/lang/Object", null);
@@ -339,8 +339,13 @@ public class ClassCreator {
         """
     )
     public MethodCreator createMethod(String name, String[] paramTypes, String returnType) {
-        this.beginMethodCreation();
+        this.ensureHeadVisited();
         return new MethodCreator(this, name, paramTypes, returnType);
+    }
+
+    public FieldCreator createField(String name, String type) {
+        this.ensureHeadVisited();
+        return new FieldCreator(this, name, type);
     }
 
     @Info(
@@ -351,7 +356,7 @@ public class ClassCreator {
         """
     )
     public Object defineClass() {
-        if (!this.begunMethodCreation) this.beginMethodCreation();
+        this.ensureHeadVisited();
         this.classWriter.visitEnd();
         return ClassJSClassLoader.INSTANCE.defineClass(this.getClassName(), this.classWriter.toByteArray());
     }
