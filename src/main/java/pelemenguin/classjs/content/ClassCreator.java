@@ -351,6 +351,7 @@ public class ClassCreator {
         """
     )
     public Object defineClass() {
+        if (!this.begunMethodCreation) this.beginMethodCreation();
         this.classWriter.visitEnd();
         return ClassJSClassLoader.INSTANCE.defineClass(this.getClassName(), this.classWriter.toByteArray());
     }

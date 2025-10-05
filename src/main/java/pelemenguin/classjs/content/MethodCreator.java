@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map.Entry;
+import java.util.function.Consumer;
+
+import javax.annotation.Nullable;
 
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
@@ -401,7 +404,7 @@ public class MethodCreator {
         private static record CodeLabel(Label label, boolean isDefined) {}
         private static record ScopeInfo(ScopeType type, String targetLabelName) {
             public static enum ScopeType {
-                IF, ELSE
+                IF, ELSE, CASE
             }
         }
 
@@ -2775,7 +2778,7 @@ public class MethodCreator {
             this.labelNext(scopeInfo.targetLabelName);
             // This label name is not the target of `else`, but the original target of `if`
             this.scopes.add(new ScopeInfo(ScopeInfo.ScopeType.ELSE, labelName));
-            ClassJS.LOGGER.debug("elseThen() called. Scope status: " + this.scopes.toString());
+            ClassJS.LOGGER.debug("elseThen() called on " + this.parent + ". Scope status: " + this.scopes.toString());
             return this;
         }
 
@@ -2803,7 +2806,7 @@ public class MethodCreator {
             } else {
                 throw new IllegalStateException("No open if statement to close.");
             }
-            ClassJS.LOGGER.debug("fi() called. Scope status: " + this.scopes.toString());
+            ClassJS.LOGGER.debug("fi() called on " + this.parent + ". Scope status: " + this.scopes.toString());
             return this;
         }
 
@@ -2824,6 +2827,223 @@ public class MethodCreator {
         public MethodCodeBuilder gotoLabel(String labelName) {
             Label label = this.getOrCreateLabel(labelName);
             this.methodVisitor.visitJumpInsn(Opcodes.GOTO, label);
+            return this;
+        }
+
+        @Info(
+            """
+            @deprecated This instruction is deprecated in Java 6 and later.
+
+            Add a `jsr` instruction to the method to jump to a specified subroutine.
+
+            The `jsr` instruction causes a jump to a specified label in the method code, saving the return address on the operand stack.
+            This instruction is used for implementing subroutines in Java bytecode.
+
+            **Operand Stack:** (*returnAddress* is the address to return to after the subroutine.)
+
+            { ... } → { ... , *returnAddress* }
+
+            @param labelName - The name of the label to jump to.
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder jumpSubroutine(String labelName) {
+            Label label = this.getOrCreateLabel(labelName);
+            this.methodVisitor.visitJumpInsn(Opcodes.JSR, label);
+            return this;
+        }
+
+        @Info(
+            """
+            @deprecated This instruction is deprecated in Java 6 and later.
+
+            Add a `ret` instruction to the method to return from a subroutine.
+
+            The `ret` instruction returns from a subroutine by jumping to the address stored in a local variable.
+            This instruction is used in conjunction with the `jsr` instruction for implementing subroutines in Java bytecode.
+
+            **Operand Stack:**
+
+            { ... } → { ... }
+
+            @param variableName - The name of the local variable that contains the return address.
+            @returns This `MethodCodeBuilder` instance.
+            @throws `IllegalArgumentException` if the specified variable does not exist.
+            """
+        )
+        public MethodCodeBuilder returnSubroutine(String variableName) {
+            int varIndex = this.getVariableIndexOrThrow(variableName);
+            this.methodVisitor.visitVarInsn(Opcodes.RET, varIndex);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `tableswitch` instruction to the method for switch-case control flow based on integer values.
+
+            The `tableswitch` instruction allows for efficient branching based on a range of integer values.
+            It pops an integer from the operand stack and jumps to the corresponding label based on the value.
+            If the value is outside the specified range, it jumps to the default label.
+
+            **Operand Stack:** (*index* is the integer value used for switching.)
+
+            { ... , *index* } → { ... }
+
+            @param min - The minimum integer value in the switch range (inclusive).
+            @param max - The maximum integer value in the switch range (inclusive).
+            @param actions - An array of actions (as `(MethodCodeBuilder) => void`) corresponding to each integer value from min to max.
+                Each action will be executed when the operand stack's integer matches its index (min + i).
+                **To break out of a case block, use the `breakCase()` method within the action.**
+                Or else, the execution will **"fall through"** to the next case block.
+            @param defaultAction - The action (as `(MethodCodeBuilder) => void`) to execute if the integer value is outside the range [min, max].
+            @returns This `MethodCodeBuilder` instance.
+                May be `null` if no default action is provided.
+            @throws `IllegalArgumentException` if the number of actions does not equal (max - min + 1).
+            """
+        )
+        public MethodCodeBuilder tableSwitch(int min, int max, Consumer<MethodCodeBuilder>[] actions, @Nullable Consumer<MethodCodeBuilder> defaultAction) {
+            if (max - min + 1 != actions.length) {
+                throw new IllegalArgumentException("Number of actions must be equal to (max - min + 1).");
+            }
+
+            // End label
+            String endLabelName = this.newAnonymousLableName();
+            this.getOrCreateLabel(endLabelName);
+
+            // Default branch label
+            String defaultLabelName = this.newAnonymousLableName();
+            Label defaultLabel = this.getOrCreateLabel(defaultLabelName);
+
+            // Case labels
+            String[] names = new String[actions.length];
+            Label[] labels = new Label[names.length];
+            for (int i = 0; i < names.length; i++) {
+                names[i] = this.newAnonymousLableName();
+                labels[i] = this.getOrCreateLabel(names[i]);
+            }
+
+            this.methodVisitor.visitTableSwitchInsn(min, max, defaultLabel, labels);
+
+            // Write
+            for (int i = 0; i < actions.length; i++) {
+                this.scopes.add(new ScopeInfo(ScopeInfo.ScopeType.CASE, endLabelName));
+                this.labelNext(names[i]);
+                actions[i].accept(this);
+                this.scopes.removeLast();
+            }
+
+            // Default branch
+            this.labelNext(defaultLabelName);
+            if (defaultAction != null) {
+                this.scopes.add(new ScopeInfo(ScopeInfo.ScopeType.CASE, endLabelName));
+                defaultAction.accept(this);
+                this.scopes.removeLast();
+            }
+
+            // End
+            this.labelNext(endLabelName);
+
+            return this;
+        }
+        public MethodCodeBuilder tableSwitch(int min, int max, Consumer<MethodCodeBuilder>[] actions) {
+            return this.tableSwitch(min, max, actions, null);
+        }
+
+        @Info(
+            """
+            Add a `lookupswitch` instruction to the method for switch-case control flow based on specific integer keys.
+
+            The `lookupswitch` instruction allows for branching based on specific integer values.
+            It pops an integer from the operand stack and jumps to the corresponding label if the value matches one of the specified keys.
+            If the value does not match any key, it jumps to the default label.
+
+            **Operand Stack:** (*key* is the integer value used for switching.)
+
+            { ... , *key* } → { ... }
+
+            @param keys - An array of integer keys for the switch cases. Must be sorted in ascending order.
+            @param actions - An array of actions (as `(MethodCodeBuilder) => void`) corresponding to each key.
+                Each action will be executed when the operand stack's integer matches its corresponding key.
+                **To break out of a case block, use the `breakCase()` method within the action.**
+                Or else, the execution will **"fall through"** to the next case block.
+            @param defaultAction - The action (as `(MethodCodeBuilder) => void`) to execute if the integer value does not match any key.
+            @returns This `MethodCodeBuilder` instance.
+                May be `null` if no default action is provided.
+            @throws `IllegalArgumentException` if the number of actions does not equal the number of keys.
+            """
+        )
+        public MethodCodeBuilder lookupSwitch(int[] keys, Consumer<MethodCodeBuilder>[] actions, @Nullable Consumer<MethodCodeBuilder> defaultAction) {
+            if (keys.length != actions.length) {
+                throw new IllegalArgumentException("Number of actions must be equal to number of keys.");
+            }
+
+            // End label
+            String endLabelName = this.newAnonymousLableName();
+            this.getOrCreateLabel(endLabelName);
+
+            // Default branch label
+            String defaultLabelName = this.newAnonymousLableName();
+            Label defaultLabel = this.getOrCreateLabel(defaultLabelName);
+
+            // Case labels
+            String[] names = new String[actions.length];
+            Label[] labels = new Label[names.length];
+            for (int i = 0; i < names.length; i++) {
+                names[i] = this.newAnonymousLableName();
+                labels[i] = this.getOrCreateLabel(names[i]);
+            }
+
+            this.methodVisitor.visitLookupSwitchInsn(defaultLabel, keys, labels);
+
+            // Write
+            for (int i = 0; i < actions.length; i++) {
+                this.scopes.add(new ScopeInfo(ScopeInfo.ScopeType.CASE, endLabelName));
+                this.labelNext(names[i]);
+                actions[i].accept(this);
+                this.scopes.removeLast();
+            }
+
+            // Default branch
+            this.labelNext(defaultLabelName);
+            if (defaultAction != null) {
+                this.scopes.add(new ScopeInfo(ScopeInfo.ScopeType.CASE, endLabelName));
+                defaultAction.accept(this);
+                this.scopes.removeLast();
+            }
+
+            // End
+            this.labelNext(endLabelName);
+
+            return this;
+        }
+
+        @Info(
+            """
+            Break out of the nearest enclosing *case* block.
+
+            The `breakCase()` method allows you to exit the nearest enclosing `tableswitch` case block prematurely.
+            It generates a `goto` instruction to jump to the end of the `tableswitch` construct.
+
+            This method must be called within a `tableswitch` case block; otherwise, it throws an `IllegalStateException`.
+
+            **Operand Stack:**
+
+            { ... } → { ... }
+
+            @returns This `MethodCodeBuilder` instance.
+            @throws `IllegalStateException` if there is no open `tableswitch` case block to break from.
+            """
+        )
+        public MethodCodeBuilder breakCase() {
+            if (this.scopes.isEmpty()) {
+                throw new IllegalStateException("No open case statement to break. Current scope status: " + this.scopes.toString());
+            }
+            ScopeInfo l = this.scopes.getLast();
+            if (l.type != ScopeInfo.ScopeType.CASE) {
+                throw new IllegalStateException("No open case statement to break. Current scope status: " + this.scopes.toString());
+            }
+            this.gotoLabel(l.targetLabelName);
+            ClassJS.LOGGER.debug("breakCase() called on " + this.parent + ". Scope status: " + this.scopes.toString());
             return this;
         }
 
@@ -3006,24 +3226,10 @@ public class MethodCreator {
             return this;
         }
 
-        private static final String ERROR_HEADER = """
+        private static final String ERROR_INFO_PATTERN = """
             Well, ASM has thrown a(n) %s during computing stack map table.
             Here are some possible reasons:
 
-            """.stripIndent();
-        
-        private static final String ERROR_END = """
-
-            To report this issue:
-
-                - Do NOT copy this message to others, this message does NOT contain any useful information!
-                - Bring your code related to the generation of the class.
-                - You can find generated byte code in "debug.log".
-
-            The exception is thrown as-is, restart the game after fixing this problem.
-            """;
-        
-        private static final String ERROR_NEGATIVE_ARRAY_SIZE = """
                 1. Stack Underflow: Some execution paths pop more values from the stack than were pushed.
 
                     [Example]
@@ -3057,24 +3263,15 @@ public class MethodCreator {
                 - Verify method invocations have correct stack impact calculations
                 - Ensure return types match the actual stack contents
                 - Or turn to others for help
+
+            To ask for help:
+
+                - Do NOT copy this message to others, this message does NOT contain any useful information!
+                - Bring your code related to the generation of the class.
+                - You can find generated byte code in "debug.log".
+
+            The exception is thrown as-is, restart the game after fixing this problem.
             """.stripIndent();
-
-        private static final String ERROR_ARRAY_INDEX_OUT_OF_BOUNDS = """
-                1. I don't know. If you encountered this exception, report this on GitHub with your code related to the generation of the class.
-
-                    [Example] No examples, but yours may be the first :)
-            """.stripIndent();
-        
-        private static final String ERROR_COMMON = """
-            Well, ASM has thrown an Exception during computing stack map table,
-            but we don't know the reason.
-
-            Usually this is because you did not correctly manage the operand stack,
-            and did not follow the JVM Specification.
-
-            Report this on GitHub with your code related to the generation of the class,
-            and become the next classic example to be shown here :)
-            """;
 
         @Info(
             """
@@ -3098,13 +3295,8 @@ public class MethodCreator {
             try {
                 methodVisitor.visitMaxs(0, 0);
             } catch (NegativeArraySizeException e) {
-                ConsoleJS.STARTUP.error(ERROR_HEADER.formatted("NegativeArraySizeException") + ERROR_NEGATIVE_ARRAY_SIZE + ERROR_END);
+                ConsoleJS.STARTUP.error(ERROR_INFO_PATTERN.formatted(e.getClass().getName()));
                 throw e;
-            } catch (ArrayIndexOutOfBoundsException e) {
-                ConsoleJS.STARTUP.error(ERROR_HEADER.formatted("ArrayIndexOutOfBoundsException") + ERROR_ARRAY_INDEX_OUT_OF_BOUNDS + ERROR_END);
-                throw e;
-            } catch (Exception e) {
-                ConsoleJS.STARTUP.error(ERROR_COMMON);
             }
             methodVisitor.visitEnd();
             return this.parent.parent;
