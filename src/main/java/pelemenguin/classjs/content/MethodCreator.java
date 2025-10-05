@@ -2074,7 +2074,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder IntXor() {
+        public MethodCodeBuilder intXor() {
             this.methodVisitor.visitInsn(Opcodes.IXOR);
             return this;
         }
@@ -3021,17 +3021,17 @@ public class MethodCreator {
             """
             Break out of the nearest enclosing *case* block.
 
-            The `breakCase()` method allows you to exit the nearest enclosing `tableswitch` case block prematurely.
-            It generates a `goto` instruction to jump to the end of the `tableswitch` construct.
+            The `breakCase()` method allows you to exit the nearest enclosing case block prematurely.
+            It generates a `goto` instruction to jump to the end of the `switch` construct.
 
-            This method must be called within a `tableswitch` case block; otherwise, it throws an `IllegalStateException`.
+            This method must be called within a case block; otherwise, it throws an `IllegalStateException`.
 
             **Operand Stack:**
 
             { ... } → { ... }
 
             @returns This `MethodCodeBuilder` instance.
-            @throws `IllegalStateException` if there is no open `tableswitch` case block to break from.
+            @throws `IllegalStateException` if there is no open case block to break from.
             """
         )
         public MethodCodeBuilder breakCase() {
@@ -3158,6 +3158,52 @@ public class MethodCreator {
         )
         public MethodCodeBuilder returnVoid() {
             this.methodVisitor.visitInsn(Opcodes.RETURN);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `getstatic` instruction to the method to retrieve the value of a static field from a specified class.
+
+            The `getstatic` instruction fetches the value of a static field from a specified class and pushes it onto the operand stack.
+
+            **Operand Stack:** (*value* is the value of the static field.)
+
+            { ... } → { ... , *value* }
+
+            @param clazz - The class containing the static field.
+            @param fieldName - The name of the static field.
+            @param fieldType - The type of the static field (e.g., `int`, `java.lang.String`, etc.).
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder getStaticField(Class<?> clazz, String fieldName, String fieldType) {
+            String owner = clazz.getName().replace(".", "/");
+            String descriptor = DescriptorUtils.toFieldDescriptor(fieldType);
+            this.methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, owner, fieldName, descriptor);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `putstatic` instruction to the method to set the value of a static field in a specified class.
+
+            The `putstatic` instruction sets the value of a static field in a specified class using the value on the top of the operand stack.
+
+            **Operand Stack:** (*value* is the value to be assigned to the static field.)
+
+            { ... , *value* } → { ... }
+
+            @param clazz - The class containing the static field.
+            @param fieldName - The name of the static field.
+            @param fieldType - The type of the static field (e.g., `int`, `java.lang.String`, etc.).
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder putStaticField(Class<?> clazz, String fieldName, String fieldType) {
+            String owner = clazz.getName().replace(".", "/");
+            String descriptor = DescriptorUtils.toFieldDescriptor(fieldType);
+            this.methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, owner, fieldName, descriptor);
             return this;
         }
 
