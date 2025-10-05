@@ -355,4 +355,9 @@ public class ClassCreator {
         return ClassJSClassLoader.INSTANCE.defineClass(this.getClassName(), this.classWriter.toByteArray());
     }
 
+    @Override
+    public String toString() {
+        return "ClassCreator(" + this.getClassName() + ")";
+    }
+
 }

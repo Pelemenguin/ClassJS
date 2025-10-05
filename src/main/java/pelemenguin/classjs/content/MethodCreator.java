@@ -391,6 +391,11 @@ public class MethodCreator {
         return this.parent;
     }
 
+    @Override
+    public String toString() {
+        return "MethodCreator(name=" + this.name + ", parent=" + this.parent + ")";
+    }
+
     public static class MethodCodeBuilder {
 
         private static record CodeLabel(Label label, boolean isDefined) {}
@@ -2420,6 +2425,79 @@ public class MethodCreator {
 
         @Info(
             """
+            Add an `lcmp` instruction to the method.
+
+            The `lcmp` instruction compares the top two longs on the operand stack.
+
+            **Operand Stack:** (*l1* and *l2* are the longs to be compared, "---" are the second slots taken,
+                and *result* is -1, 0, or 1, depending on the sign of *l1* - *l2*.)
+
+            { ... , *l1* , --- , *l2* , --- } → { ... , *result* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder compareLong() {
+            this.methodVisitor.visitInsn(Opcodes.LCMP);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `fcmpl` or `fcmpg` instruction to the method to compare the top two floats on the operand stack.
+
+            The `fcmpl` and `fcmpg` instructions compare the top two floats on the operand stack.
+            The choice between `fcmpl` and `fcmpg` determines how NaN (Not a Number) values are handled:
+            - `fcmpl`: If either of the floats is NaN, it pushes -1 onto the operand stack.
+            - `fcmpg`: If either of the floats is NaN, it pushes 1 onto the operand stack.
+
+            **Operand Stack:** (*f1* and *f2* are the floats to be compared, and *result* is -1, 0, or 1,
+                depending on the sign of *f1* - *f2*, or -1/1 if either is NaN.)
+
+            { ... , *f1* , *f2* } → { ... , *result* }
+
+            @param push1IfNaN - If true, uses `fcmpg`; if false, uses `fcmpl`.
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder compareFloat(boolean push1IfNaN) {
+            this.methodVisitor.visitInsn(push1IfNaN ? Opcodes.FCMPG : Opcodes.FCMPL);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `dcmpl` or `dcmpg` instruction to the method to compare the top two doubles on the operand stack.
+
+            The `dcmpl` and `dcmpg` instructions compare the top two doubles on the operand stack.
+            The choice between `dcmpl` and `dcmpg` determines how NaN (Not a Number) values are handled:
+            - `dcmpl`: If either of the doubles is NaN, it pushes -1 onto the operand stack.
+            - `dcmpg`: If either of the doubles is NaN, it pushes 1 onto the operand stack.
+
+            **Operand Stack:** (*d1* and *d2* are the doubles to be compared, "---" are the second slots taken,
+                and *result* is -1, 0, or 1, depending on the sign of *d1* - *d2*, or -1/1 if either is NaN.)
+
+            { ... , *d1* , --- , *d2* , --- } → { ... , *result* }
+
+            @param push1IfNaN - If true, uses `dcmpg`; if false, uses `dcmpl`.
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder compareDouble(boolean push1IfNaN) {
+            this.methodVisitor.visitInsn(push1IfNaN ? Opcodes.DCMPG : Opcodes.DCMPL);
+            return this;
+        }
+
+        private void ifHelper(int usingOpcode, String debugMethodName) {
+            String name = this.newAnonymousLableName();
+            Label l = this.getOrCreateLabel(name);
+            this.methodVisitor.visitJumpInsn(usingOpcode, l);
+            this.scopes.add(new ScopeInfo(ScopeInfo.ScopeType.IF, name));
+            ClassJS.LOGGER.debug(debugMethodName + " called on " + this.parent + ". Scope status: " + this.scopes.toString());
+        }
+
+        @Info(
+            """
             Start an `if` statement that checks if the top integer on the operand stack is non-zero.
 
             The `ifNonZero` method pops the top integer from the operand stack and checks if it is not equal to zero.
@@ -2435,11 +2513,7 @@ public class MethodCreator {
             """
         )
         public MethodCodeBuilder ifNonZero() {
-            String name = this.newAnonymousLableName();
-            Label l = this.getOrCreateLabel(name);
-            this.methodVisitor.visitJumpInsn(Opcodes.IFEQ, l);
-            this.scopes.add(new ScopeInfo(ScopeInfo.ScopeType.IF, name));
-            ClassJS.LOGGER.debug("ifNonZero() called. Scope status: " + this.scopes.toString());
+            this.ifHelper(Opcodes.IFEQ, "ifNonZero()");
             return this;
         }
 
@@ -2460,11 +2534,7 @@ public class MethodCreator {
             """
         )
         public MethodCodeBuilder ifZero() {
-            String name = this.newAnonymousLableName();
-            Label l = this.getOrCreateLabel(name);
-            this.methodVisitor.visitJumpInsn(Opcodes.IFNE, l);
-            this.scopes.add(new ScopeInfo(ScopeInfo.ScopeType.IF, name));
-            ClassJS.LOGGER.debug("ifZero() called. Scope status: " + this.scopes.toString());
+            this.ifHelper(Opcodes.IFNE, "ifZero()");
             return this;
         }
 
@@ -2485,11 +2555,7 @@ public class MethodCreator {
             """
         )
         public MethodCodeBuilder ifNonNegative() {
-            String name = this.newAnonymousLableName();
-            Label l = this.getOrCreateLabel(name);
-            this.methodVisitor.visitJumpInsn(Opcodes.IFLT, l);
-            this.scopes.add(new ScopeInfo(ScopeInfo.ScopeType.IF, name));
-            ClassJS.LOGGER.debug("ifNonNegative() called. Scope status: " + this.scopes.toString());
+            this.ifHelper(Opcodes.IFLT, "ifNonNegative()");
             return this;
         }
 
@@ -2510,11 +2576,7 @@ public class MethodCreator {
             """
         )
         public MethodCodeBuilder ifNegative() {
-            String name = this.newAnonymousLableName();
-            Label l = this.getOrCreateLabel(name);
-            this.methodVisitor.visitJumpInsn(Opcodes.IFGE, l);
-            this.scopes.add(new ScopeInfo(ScopeInfo.ScopeType.IF, name));
-            ClassJS.LOGGER.debug("ifNegative() called. Scope status: " + this.scopes.toString());
+            this.ifHelper(Opcodes.IFGE, "ifNegative()");
             return this;
         }
 
@@ -2535,11 +2597,7 @@ public class MethodCreator {
             """
         )
         public MethodCodeBuilder ifNonPositive() {
-            String name = this.newAnonymousLableName();
-            Label l = this.getOrCreateLabel(name);
-            this.methodVisitor.visitJumpInsn(Opcodes.IFGT, l);
-            this.scopes.add(new ScopeInfo(ScopeInfo.ScopeType.IF, name));
-            ClassJS.LOGGER.debug("ifNonPositive() called. Scope status: " + this.scopes.toString());
+            this.ifHelper(Opcodes.IFGT, "ifNonPositive()");
             return this;
         }
 
@@ -2560,11 +2618,133 @@ public class MethodCreator {
             """
         )
         public MethodCodeBuilder ifPositive() {
-            String name = this.newAnonymousLableName();
-            Label l = this.getOrCreateLabel(name);
-            this.methodVisitor.visitJumpInsn(Opcodes.IFLE, l);
-            this.scopes.add(new ScopeInfo(ScopeInfo.ScopeType.IF, name));
-            ClassJS.LOGGER.debug("ifPositive() called. Scope status: " + this.scopes.toString());
+            this.ifHelper(Opcodes.IFLE, "ifPositive()");
+            return this;
+        }
+
+        @Info(
+            """
+            Start an `if` statement that checks if the top two integers on the operand stack are equal.
+
+            The `ifEqualsTo` method pops the top two integers from the operand stack and checks if they are equal.
+            If the values are equal, execution continues with the next instruction; otherwise, execution jumps to the instruction after the corresponding `fi()` or `else()`.
+
+            This method must be paired with a subsequent call to `fi()` to close the `if` statement.
+
+            **Operand Stack:** (*i1* and *i2* are the integers to be compared.)
+
+            { ... , *i1* , *i2* } → { ... }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder ifEqualsTo() {
+            this.ifHelper(Opcodes.IF_ICMPNE, "ifEqualsTo()");
+            return this;
+        }
+
+        @Info(
+            """
+            Start an `if` statement that checks if the top two integers on the operand stack are not equal.
+
+            The `ifNotEqualsTo` method pops the top two integers from the operand stack and checks if they are not equal.
+            If the values are not equal, execution continues with the next instruction; otherwise, execution jumps to the instruction after the corresponding `fi()` or `else()`.
+
+            This method must be paired with a subsequent call to `fi()` to close the `if` statement.
+
+            **Operand Stack:** (*i1* and *i2* are the integers to be compared.)
+
+            { ... , *i1* , *i2* } → { ... }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder ifNotEqualsTo() {
+            this.ifHelper(Opcodes.IF_ICMPEQ, "ifNotEqualsTo()");
+            return this;
+        }
+
+        @Info(
+            """
+            Start an `if` statement that checks if the top two integers on the operand stack are less than.
+
+            The `ifLessThan` method pops the top two integers from the operand stack and checks if the first integer is less than the second integer.
+            If *i1* ≥ *i2*, execution continues with the next instruction; otherwise, execution jumps to the instruction after the corresponding `fi()` or `else()`.
+
+            This method must be paired with a subsequent call to `fi()` to close the `if` statement.
+
+            **Operand Stack:** (*i1* and *i2* are the integers to be compared.)
+
+            { ... , *i1* , *i2* } → { ... }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder ifGreaterThanOrEqualsTo() {
+            this.ifHelper(Opcodes.IF_ICMPLT, "ifGreaterThanOrEqualsTo()");
+            return this;
+        }
+
+        @Info(
+            """
+            Start an `if` statement that checks if the top two integers on the operand stack are greater than.
+
+            The `ifLessThan` method pops the top two integers from the operand stack and checks if the first integer is greater than the second integer.
+            If *i1* < *i2*, execution continues with the next instruction; otherwise, execution jumps to the instruction after the corresponding `fi()` or `else()`.
+
+            This method must be paired with a subsequent call to `fi()` to close the `if` statement.
+
+            **Operand Stack:** (*i1* and *i2* are the integers to be compared.)
+
+            { ... , *i1* , *i2* } → { ... }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder ifLessThan() {
+            this.ifHelper(Opcodes.IF_ICMPGE, "ifLessThan()");
+            return this;
+        }
+
+        @Info(
+            """
+            Start an `if` statement that checks if the top two integers on the operand stack are less than or equal to.
+
+            The `ifLessThanOrEqualsTo` method pops the top two integers from the operand stack and checks if the first integer is less than or equal to the second integer.
+            If *i1* ≤ *i2*, execution continues with the next instruction; otherwise, execution jumps to the instruction after the corresponding `fi()` or `else()`.
+
+            This method must be paired with a subsequent call to `fi()` to close the `if` statement.
+
+            **Operand Stack:** (*i1* and *i2* are the integers to be compared.)
+
+            { ... , *i1* , *i2* } → { ... }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder ifLessThanOrEqualsTo() {
+            this.ifHelper(Opcodes.IF_ICMPGT, "ifLessThanOrEqualsTo()");
+            return this;
+        }
+
+        @Info(
+            """
+            Start an `if` statement that checks if the top two integers on the operand stack are greater than.
+
+            The `ifGreaterThan` method pops the top two integers from the operand stack and checks if the first integer is greater than the second integer.
+            If *i1* > *i2*, execution continues with the next instruction; otherwise, execution jumps to the instruction after the corresponding `fi()` or `else()`.
+
+            This method must be paired with a subsequent call to `fi()` to close the `if` statement.
+
+            **Operand Stack:** (*i1* and *i2* are the integers to be compared.)
+
+            { ... , *i1* , *i2* } → { ... }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder ifGreaterThan() {
+            this.ifHelper(Opcodes.IF_ICMPLE, "ifGreaterThan()");
             return this;
         }
 
