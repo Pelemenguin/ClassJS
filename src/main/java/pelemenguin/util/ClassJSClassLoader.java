@@ -22,7 +22,9 @@ public class ClassJSClassLoader extends ClassLoader {
             return CREATED_CLASSES.get(name);
         }
         ByteCodeLogUtils.logClassCreated(LOADER_LOGGER, name, b);
-        NativeJavaClass result = new NativeJavaClass(KubeJS.getStartupScriptManager().context, KubeJS.getStartupScriptManager().topLevelScope, this.defineClass(name, b, 0, b.length));
+
+        Class<?> defined = this.defineClass(name, b, 0, b.length);
+        NativeJavaClass result = new NativeJavaClass(KubeJS.getStartupScriptManager().context, KubeJS.getStartupScriptManager().topLevelScope, defined);
         CREATED_CLASSES.put(name, result);
         return result;
     }

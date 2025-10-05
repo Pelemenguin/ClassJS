@@ -10,6 +10,8 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
 import dev.latvian.mods.kubejs.typings.Info;
+import dev.latvian.mods.kubejs.util.ConsoleJS;
+import pelemenguin.classjs.ClassJS;
 import pelemenguin.util.DescriptorUtils;
 
 public class MethodCreator {
@@ -2421,7 +2423,7 @@ public class MethodCreator {
             Start an `if` statement that checks if the top integer on the operand stack is non-zero.
 
             The `ifNonZero` method pops the top integer from the operand stack and checks if it is not equal to zero.
-            If the value is non-zero, execution continues with the next instruction; otherwise, execution jumps to the instruction after the corresponding `fi()`.
+            If the value is non-zero, execution continues with the next instruction; otherwise, execution jumps to the instruction after the corresponding `fi()` or `else()`.
 
             This method must be paired with a subsequent call to `fi()` to close the `if` statement.
 
@@ -2437,6 +2439,7 @@ public class MethodCreator {
             Label l = this.getOrCreateLabel(name);
             this.methodVisitor.visitJumpInsn(Opcodes.IFEQ, l);
             this.scopes.add(new ScopeInfo(ScopeInfo.ScopeType.IF, name));
+            ClassJS.LOGGER.debug("ifNonZero() called. Scope status: " + this.scopes.toString());
             return this;
         }
 
@@ -2445,7 +2448,7 @@ public class MethodCreator {
             Start an `if` statement that checks if the top integer on the operand stack is zero.
 
             The `ifZero` method pops the top integer from the operand stack and checks if it is equal to zero.
-            If the value is zero, execution continues with the next instruction; otherwise, execution jumps to the instruction after the corresponding `fi()`.
+            If the value is zero, execution continues with the next instruction; otherwise, execution jumps to the instruction after the corresponding `fi()` or `else()`.
 
             This method must be paired with a subsequent call to `fi()` to close the `if` statement.
 
@@ -2461,19 +2464,138 @@ public class MethodCreator {
             Label l = this.getOrCreateLabel(name);
             this.methodVisitor.visitJumpInsn(Opcodes.IFNE, l);
             this.scopes.add(new ScopeInfo(ScopeInfo.ScopeType.IF, name));
+            ClassJS.LOGGER.debug("ifZero() called. Scope status: " + this.scopes.toString());
             return this;
         }
 
+        @Info(
+            """
+            Start an `if` statement that checks if the top integer on the operand stack is non-negative.
+
+            The `ifNonNegative` method pops the top integer from the operand stack and checks if it is greater than or equal to zero.
+            If the value is non-negative, execution continues with the next instruction; otherwise, execution jumps to the instruction after the corresponding `fi()` or `else()`.
+
+            This method must be paired with a subsequent call to `fi()` to close the `if` statement.
+
+            **Operand Stack:** (*i* is the integer to be checked.)
+
+            { ... , *i* } → { ... }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder ifNonNegative() {
+            String name = this.newAnonymousLableName();
+            Label l = this.getOrCreateLabel(name);
+            this.methodVisitor.visitJumpInsn(Opcodes.IFLT, l);
+            this.scopes.add(new ScopeInfo(ScopeInfo.ScopeType.IF, name));
+            ClassJS.LOGGER.debug("ifNonNegative() called. Scope status: " + this.scopes.toString());
+            return this;
+        }
+
+        @Info(
+            """
+            Start an `if` statement that checks if the top integer on the operand stack is negative.
+
+            The `ifNegative` method pops the top integer from the operand stack and checks if it is less than zero.
+            If the value is negative, execution continues with the next instruction; otherwise, execution jumps to the instruction after the corresponding `fi()` or `else()`.
+
+            This method must be paired with a subsequent call to `fi()` to close the `if` statement.
+
+            **Operand Stack:** (*i* is the integer to be checked.)
+
+            { ... , *i* } → { ... }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder ifNegative() {
+            String name = this.newAnonymousLableName();
+            Label l = this.getOrCreateLabel(name);
+            this.methodVisitor.visitJumpInsn(Opcodes.IFGE, l);
+            this.scopes.add(new ScopeInfo(ScopeInfo.ScopeType.IF, name));
+            ClassJS.LOGGER.debug("ifNegative() called. Scope status: " + this.scopes.toString());
+            return this;
+        }
+
+        @Info(
+            """
+            Start an `if` statement that checks if the top integer on the operand stack is non-positive.
+
+            The `ifNonPositive` method pops the top integer from the operand stack and checks if it is less than or equal to zero.
+            If the value is non-positive, execution continues with the next instruction; otherwise, execution jumps to the instruction after the corresponding `fi()` or `else()`.
+
+            This method must be paired with a subsequent call to `fi()` to close the `if` statement.
+
+            **Operand Stack:** (*i* is the integer to be checked.)
+
+            { ... , *i* } → { ... }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder ifNonPositive() {
+            String name = this.newAnonymousLableName();
+            Label l = this.getOrCreateLabel(name);
+            this.methodVisitor.visitJumpInsn(Opcodes.IFGT, l);
+            this.scopes.add(new ScopeInfo(ScopeInfo.ScopeType.IF, name));
+            ClassJS.LOGGER.debug("ifNonPositive() called. Scope status: " + this.scopes.toString());
+            return this;
+        }
+
+        @Info(
+            """
+            Start an `if` statement that checks if the top integer on the operand stack is positive.
+
+            The `ifPositive` method pops the top integer from the operand stack and checks if it is greater than zero.
+            If the value is positive, execution continues with the next instruction; otherwise, execution jumps to the instruction after the corresponding `fi()` or `else()`.
+
+            This method must be paired with a subsequent call to `fi()` to close the `if` statement.
+
+            **Operand Stack:** (*i* is the integer to be checked.)
+
+            { ... , *i* } → { ... }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder ifPositive() {
+            String name = this.newAnonymousLableName();
+            Label l = this.getOrCreateLabel(name);
+            this.methodVisitor.visitJumpInsn(Opcodes.IFLE, l);
+            this.scopes.add(new ScopeInfo(ScopeInfo.ScopeType.IF, name));
+            ClassJS.LOGGER.debug("ifPositive() called. Scope status: " + this.scopes.toString());
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `else` clause to the most recent `if` statement.
+
+            The `elseThen()` method adds an `else` clause to the most recent `if` statement.
+            It creates a new label for the end of the `if-else` construct and jumps to it if the `if` condition was true.
+            The execution continues at the next instruction after the `if` block if the condition was false.
+
+            This method must be called after an `ifNonZero()`, `ifZero()`, `ifPositive()`, or `ifNegative()` call and before a corresponding `fi()` call.
+
+            @returns This `MethodCodeBuilder` instance.
+            @throws `IllegalStateException` if there is no open `if` statement to add an `else`.
+            """
+        )
         public MethodCodeBuilder elseThen() {
             String labelName = this.newAnonymousLableName();
-            ScopeInfo scopeInfo = this.scopes.pop();
+            ScopeInfo scopeInfo = this.scopes.removeLast();
             if (scopeInfo.type != ScopeInfo.ScopeType.IF) {
-                throw new IllegalStateException("No open if statement to add else.");
+                this.scopes.add(scopeInfo);
+                IllegalStateException exception = new IllegalStateException("No open if statement to add else.");
+                ClassJS.LOGGER.error("No open if statement to add else, current scope status: " + this.scopes.toString());
+                throw exception;
             }
             this.gotoLabel(labelName);
             this.labelNext(scopeInfo.targetLabelName);
             // This label name is not the target of `else`, but the original target of `if`
             this.scopes.add(new ScopeInfo(ScopeInfo.ScopeType.ELSE, labelName));
+            ClassJS.LOGGER.debug("elseThen() called. Scope status: " + this.scopes.toString());
             return this;
         }
 
@@ -2501,6 +2623,7 @@ public class MethodCreator {
             } else {
                 throw new IllegalStateException("No open if statement to close.");
             }
+            ClassJS.LOGGER.debug("fi() called. Scope status: " + this.scopes.toString());
             return this;
         }
 
@@ -2703,6 +2826,76 @@ public class MethodCreator {
             return this;
         }
 
+        private static final String ERROR_HEADER = """
+            Well, ASM has thrown a(n) %s during computing stack map table.
+            Here are some possible reasons:
+
+            """.stripIndent();
+        
+        private static final String ERROR_END = """
+
+            To report this issue:
+
+                - Do NOT copy this message to others, this message does NOT contain any useful information!
+                - Bring your code related to the generation of the class.
+                - You can find generated byte code in "debug.log".
+
+            The exception is thrown as-is, restart the game after fixing this problem.
+            """;
+        
+        private static final String ERROR_NEGATIVE_ARRAY_SIZE = """
+                1. Stack Underflow: Some execution paths pop more values from the stack than were pushed.
+
+                    [Example]
+                        .gotoLabel("goto")
+                        .labelNext("pop")
+                        .pop()                // Pop a value here, but no value is on the stack.
+                        .gotoLabel("return")
+                        .labelNext("goto")
+                        .gotoLabel("pop")
+                        .labelNext("return")
+                        .returnVoid()
+
+                2. Control Flow Mismatch: Different branches of if/else statements leave different stack heights.
+
+                    [Example]
+                        .ifZero()
+                            .pushInt(0) // Push an int here
+                        .elseThen()
+                                        // While the other branch does not
+                        .fi()           // Conflict!
+                        .returnVoid()
+                
+                3. Other reasons we don't know.
+                    If nothing above matches your situation, report this on GitHub with your code related to the generation of the class.
+
+                    [Example] No examples, but yours may be the first :)
+
+            To fix this issue:
+
+                - Check if all if/else branches leave the same stack height
+                - Verify method invocations have correct stack impact calculations
+                - Ensure return types match the actual stack contents
+                - Or turn to others for help
+            """.stripIndent();
+
+        private static final String ERROR_ARRAY_INDEX_OUT_OF_BOUNDS = """
+                1. I don't know. If you encountered this exception, report this on GitHub with your code related to the generation of the class.
+
+                    [Example] No examples, but yours may be the first :)
+            """.stripIndent();
+        
+        private static final String ERROR_COMMON = """
+            Well, ASM has thrown an Exception during computing stack map table,
+            but we don't know the reason.
+
+            Usually this is because you did not correctly manage the operand stack,
+            and did not follow the JVM Specification.
+
+            Report this on GitHub with your code related to the generation of the class,
+            and become the next classic example to be shown here :)
+            """;
+
         @Info(
             """
             Ends the method creation and returns to the parent `ClassCreator`.
@@ -2722,7 +2915,17 @@ public class MethodCreator {
                 }
             }
 
-            methodVisitor.visitMaxs(0, 0);
+            try {
+                methodVisitor.visitMaxs(0, 0);
+            } catch (NegativeArraySizeException e) {
+                ConsoleJS.STARTUP.error(ERROR_HEADER.formatted("NegativeArraySizeException") + ERROR_NEGATIVE_ARRAY_SIZE + ERROR_END);
+                throw e;
+            } catch (ArrayIndexOutOfBoundsException e) {
+                ConsoleJS.STARTUP.error(ERROR_HEADER.formatted("ArrayIndexOutOfBoundsException") + ERROR_ARRAY_INDEX_OUT_OF_BOUNDS + ERROR_END);
+                throw e;
+            } catch (Exception e) {
+                ConsoleJS.STARTUP.error(ERROR_COMMON);
+            }
             methodVisitor.visitEnd();
             return this.parent.parent;
         }
