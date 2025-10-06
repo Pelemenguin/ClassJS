@@ -12,6 +12,8 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
+import dev.latvian.mods.kubejs.KubeJS;
+import dev.latvian.mods.kubejs.script.ScriptManager;
 import dev.latvian.mods.kubejs.typings.Info;
 import dev.latvian.mods.kubejs.util.ConsoleJS;
 import pelemenguin.classjs.ClassJS;
@@ -3171,14 +3173,17 @@ public class MethodCreator {
 
             { ... } → { ... , *value* }
 
-            @param clazz - The class containing the static field.
+            @param className - The class containing the static field.
+                Use full qualified name (e.g., `java.lang.System`).
             @param fieldName - The name of the static field.
             @param fieldType - The type of the static field (e.g., `int`, `java.lang.String`, etc.).
             @returns This `MethodCodeBuilder` instance.
+            @throws `IllegalAccessException` if the specified class is not allowed to be accessed.
             """
         )
-        public MethodCodeBuilder getStaticField(Class<?> clazz, String fieldName, String fieldType) {
-            String owner = clazz.getName().replace(".", "/");
+        public MethodCodeBuilder getStaticField(String className, String fieldName, String fieldType) throws IllegalAccessException {
+            checkIfClassAllowed(className);
+            String owner = className.replace(".", "/");
             String descriptor = DescriptorUtils.toFieldDescriptor(fieldType);
             this.methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, owner, fieldName, descriptor);
             return this;
@@ -3194,14 +3199,16 @@ public class MethodCreator {
 
             { ... , *value* } → { ... }
 
-            @param clazz - The class containing the static field.
+            @param className - The class containing the static field.
+                Use full qualified name (e.g., `java.lang.System`).
             @param fieldName - The name of the static field.
             @param fieldType - The type of the static field (e.g., `int`, `java.lang.String`, etc.).
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder putStaticField(Class<?> clazz, String fieldName, String fieldType) {
-            String owner = clazz.getName().replace(".", "/");
+        public MethodCodeBuilder putStaticField(String className, String fieldName, String fieldType) throws IllegalAccessException {
+            checkIfClassAllowed(className);
+            String owner = className.replace(".", "/");
             String descriptor = DescriptorUtils.toFieldDescriptor(fieldType);
             this.methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, owner, fieldName, descriptor);
             return this;
@@ -3348,6 +3355,13 @@ public class MethodCreator {
             return this.parent.parent;
         }
 
+    }
+
+    private static void checkIfClassAllowed(String className) throws IllegalAccessException {
+        ScriptManager manager = KubeJS.getStartupScriptManager();
+        if (manager != null && !manager.isClassAllowed(className)) {
+            throw new IllegalAccessException("Disallowed class: " + className);
+        }
     }
 
 }

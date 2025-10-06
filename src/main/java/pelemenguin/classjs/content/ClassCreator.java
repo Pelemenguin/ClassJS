@@ -10,7 +10,7 @@ import pelemenguin.classjs.util.ClassJSClassLoader;
 @Info("A class for Java classes creation.")
 public class ClassCreator {
 
-    private static final String CUSTOM_PREFIX = "generated.kubejs.custom";
+    public static final String CUSTOM_PREFIX = "generated.kubejs.custom";
 
     private String packagePrefix = "generated.kubejs"; // Fallback value
     private String name;
