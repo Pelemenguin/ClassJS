@@ -3582,6 +3582,47 @@ public class MethodCreator {
             return this;
         }
 
+        @Info(
+            """
+            Add a `checkcast` instruction to the method to cast an object to a specified type.
+
+            The `checkcast` instruction checks whether the object on the top of the operand stack is of the specified type.
+            If it is, the object reference remains on the operand stack.
+            If it is not, a `ClassCastException` is thrown at runtime.
+
+            **Operand Stack:** (*objectRef* is the reference to the object being cast.)
+
+            { ... , *objectRef* } → { ... , *objectRef* }
+
+            @param className - The name of the class or interface to cast the object to (e.g., `java.lang.String`).
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder checkCast(String className) {
+            this.methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, className.replace(".", "/"));
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `instanceof` instruction to the method to check if an object is an instance of a specified type.
+
+            The `instanceof` instruction checks whether the object on the top of the operand stack is an instance of the specified class or interface.
+            It pushes `1` (`true`) onto the operand stack if the object is an instance of the specified type, and `0` (`false`) otherwise.
+
+            **Operand Stack:** (*objectRef* is the reference to the object being checked, and *result* is `1` if true, `0` if false.)
+
+            { ... , *objectRef* } → { ... , *result* }
+
+            @param className - The name of the class or interface to check against (e.g., `java.lang.String`).
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder isInstanceOf(String className) {
+            this.methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, className.replace(".", "/"));
+            return this;
+        }
+
         private static final String ERROR_INFO_PATTERN = """
             Well, ASM has thrown a(n) %s during computing stack map table.
             Here are some possible reasons:
