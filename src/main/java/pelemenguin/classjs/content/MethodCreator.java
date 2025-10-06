@@ -404,9 +404,13 @@ public class MethodCreator {
     public static class MethodCodeBuilder {
 
         private static record CodeLabel(Label label, boolean isDefined) {}
-        private static record ScopeInfo(ScopeType type, String targetLabelName) {
+        private static record ScopeInfo(ScopeType type, String targetLabelName, Object[] extraInfo) {
+            public ScopeInfo(ScopeType type, String targetLabelName) {
+                this(type, targetLabelName, null);
+            }
+
             public static enum ScopeType {
-                IF, ELSE, CASE
+                IF, ELSE, CASE, SYNCHRONIZED
             }
         }
 
@@ -416,7 +420,7 @@ public class MethodCreator {
 
         private ArrayList<String> localVariableNames = new ArrayList<>();
         
-        // true for long variables, false for short variables
+        /** true for long variables, false for short variables */
         private ArrayList<Boolean> localVariableTypes = new ArrayList<>();
 
         private HashMap<String, CodeLabel> labels = new HashMap<>();
@@ -1071,6 +1075,7 @@ public class MethodCreator {
         )
         public MethodCodeBuilder storeObject(String variableName) {
             int index = this.getVariableIndexOrDeclare(variableName);
+            ClassJS.LOGGER.debug("Object stored: " + variableName + ". Index: " + index);
             this.methodVisitor.visitVarInsn(Opcodes.ASTORE, index);
             return this;
         }
@@ -2798,14 +2803,17 @@ public class MethodCreator {
         )
         public MethodCodeBuilder fi() {
             if (this.scopes.isEmpty()) {
+                ClassJS.LOGGER.error("No open if statement to close. Current scope status: " + this.scopes.toString());
                 throw new IllegalStateException("No open if statement to close.");
             }
-            ScopeInfo l = this.scopes.pop();
+            ScopeInfo l = this.scopes.removeLast();
             if (l.type == ScopeInfo.ScopeType.IF) {
                 this.labelNext(l.targetLabelName);
             } else if (l.type == ScopeInfo.ScopeType.ELSE) {
                 this.labelNext(l.targetLabelName);
             } else {
+                this.scopes.add(l);
+                ClassJS.LOGGER.error("No open if statement to close. Current scope status: " + this.scopes.toString());
                 throw new IllegalStateException("No open if statement to close.");
             }
             ClassJS.LOGGER.debug("fi() called on " + this.parent + ". Scope status: " + this.scopes.toString());
@@ -3649,6 +3657,72 @@ public class MethodCreator {
 
         @Info(
             """
+            Add instructions to the method to synchronize on an object.
+
+            This method combines the `duplicate`, `storeObject`, and `monitorEnter` instructions
+            to duplicate the object reference on the top of the operand stack, store one copy in a local variable,
+            and acquire a monitor lock on the object.
+
+            **Operand Stack:** (*objectRef* is the reference to the object being synchronized on.)
+
+            { ... , *objectRef* } → { ... }
+
+            **Note:** After executing `synchronizeOn`, the object reference is ***removed*** from the operand stack.
+                You may `duplicate` the object before calling this method to keep it on the operand stack.
+
+            Also, you **must** call the `synchronizeEnd` method to release the monitor lock acquired by this method.
+                Failing to do so may lead to deadlocks in your program.
+
+            @param variableName - The name of the local variable to store the object reference.
+                Make sure this variable will not be overridden before calling `synchronizeEnd`.
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder synchronizeOn(String variableName) {
+            this.duplicate()
+                .storeObject(variableName)
+                .monitorEnter();
+            ScopeInfo scopeInfo = new ScopeInfo(ScopeInfo.ScopeType.SYNCHRONIZED, null, new String[] {variableName});
+            this.scopes.add(scopeInfo);
+            ClassJS.LOGGER.debug("synchronizeOn() called on " + this.parent + ". Locked variable: " + variableName + ". Scope status: " + this.scopes.toString());
+            return this;
+        }
+
+        @Info(
+            """
+            Add instructions to the method to end a synchronized block.
+
+            This method combines the `loadObject` and `monitorExit` instructions
+            to load the object reference from a local variable and release the monitor lock on the object.
+
+            **Operand Stack:** (*objectRef* is the reference to the object being synchronized on.)
+
+            { ... } → { ... }
+
+            **Note:** You **MUST** call this method to release the monitor lock acquired by `synchronizeOn`.
+                Failing to do so may lead to deadlocks in your program.
+
+            @returns This `MethodCodeBuilder` instance.
+            @throws IllegalStateException if there is no open synchronized block to end.
+            """
+        )
+        public MethodCodeBuilder synchronizeEnd() {
+            if (this.scopes.isEmpty()) {
+                throw new IllegalStateException("No open synchronized block to end. Current scope status: " + this.scopes.toString());
+            }
+            ScopeInfo l = this.scopes.removeLast();
+            if (l.type != ScopeInfo.ScopeType.SYNCHRONIZED) {
+                this.scopes.add(l);
+                throw new IllegalStateException("No open synchronized block to end. Current scope status: " + this.scopes.toString());
+            }
+            this.loadObject((String) (l.extraInfo[0]))
+                .monitorExit();
+            ClassJS.LOGGER.debug("synchronizeEnd() called on " + this.parent + ". Unocked variable: " + l.extraInfo[0] + ". Scope status: " + this.scopes.toString());
+            return this;
+        }
+
+        @Info(
+            """
             Add a `monitorexit` instruction to the method to release a monitor lock on an object.
 
             The `monitorexit` instruction is used to release a monitor lock on the object whose reference is on the top of the operand stack.
@@ -3741,6 +3815,9 @@ public class MethodCreator {
                 throw e;
             }
             methodVisitor.visitEnd();
+
+            ClassJS.LOGGER.debug("Method built: " + this.parent + ". Final locals: " + this.localVariableNames);
+
             return this.parent.parent;
         }
 
