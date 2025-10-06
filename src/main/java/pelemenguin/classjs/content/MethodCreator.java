@@ -3183,9 +3183,7 @@ public class MethodCreator {
         )
         public MethodCodeBuilder getStaticField(String className, String fieldName, String fieldType) throws IllegalAccessException {
             checkIfClassAllowed(className);
-            String owner = className.replace(".", "/");
-            String descriptor = DescriptorUtils.toFieldDescriptor(fieldType);
-            this.methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, owner, fieldName, descriptor);
+            this.methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, className.replace(".", "/"), fieldName, DescriptorUtils.toFieldDescriptor(fieldType));
             return this;
         }
 
@@ -3208,9 +3206,51 @@ public class MethodCreator {
         )
         public MethodCodeBuilder putStaticField(String className, String fieldName, String fieldType) throws IllegalAccessException {
             checkIfClassAllowed(className);
-            String owner = className.replace(".", "/");
-            String descriptor = DescriptorUtils.toFieldDescriptor(fieldType);
-            this.methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, owner, fieldName, descriptor);
+            this.methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, className.replace(".", "/"), fieldName, DescriptorUtils.toFieldDescriptor(fieldType));
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `getfield` instruction to the method to retrieve the value of an instance field from an object.
+
+            The `getfield` instruction fetches the value of an instance field from an object and pushes it onto the operand stack.
+            The object reference must be on the top of the operand stack before executing this instruction.
+
+            **Operand Stack:** (*objectRef* is the reference to the object, and *fieldValue* is the value of the instance field.)
+
+            { ... , *objectRef* } → { ... , *fieldValue* }
+
+            @param objectType - The type of the object containing the instance field (e.g., `java.lang.String`).
+            @param fieldName - The name of the instance field.
+            @param fieldType - The type of the instance field (e.g., `int`, `java.lang.String`, etc.).
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder getField(String objectType, String fieldName, String fieldType) {
+            this.methodVisitor.visitFieldInsn(Opcodes.GETFIELD, objectType.replace(".", "/"), fieldName, DescriptorUtils.toFieldDescriptor(fieldType));
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `putfield` instruction to the method to set the value of an instance field in an object.
+
+            The `putfield` instruction sets the value of an instance field in an object using the value on the top of the operand stack.
+            The object reference must be below the value on the operand stack before executing this instruction.
+
+            **Operand Stack:** (*objectRef* is the reference to the object, and *fieldValue* is the value to be assigned to the instance field.)
+
+            { ... , *objectRef* , *fieldValue* } → { ... }
+
+            @param objectType - The type of the object containing the instance field (e.g., `java.lang.String`).
+            @param fieldName - The name of the instance field.
+            @param fieldType - The type of the instance field (e.g., `int`, `java.lang.String`, etc.).
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder putField(String objectType, String fieldName, String fieldType) {
+            this.methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, objectType.replace(".", "/"), fieldName, DescriptorUtils.toFieldDescriptor(fieldType));
             return this;
         }
 
