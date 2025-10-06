@@ -3183,7 +3183,7 @@ public class MethodCreator {
         )
         public MethodCodeBuilder getStaticField(String className, String fieldName, String fieldType) throws IllegalAccessException {
             checkIfClassAllowed(className);
-            this.methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, className.replace(".", "/"), fieldName, DescriptorUtils.toFieldDescriptor(fieldType));
+            this.methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, className.replace(".", "/"), fieldName, DescriptorUtils.toFieldDescriptor(fieldType));
             return this;
         }
 
@@ -3251,6 +3251,180 @@ public class MethodCreator {
         )
         public MethodCodeBuilder putField(String objectType, String fieldName, String fieldType) {
             this.methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, objectType.replace(".", "/"), fieldName, DescriptorUtils.toFieldDescriptor(fieldType));
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `invokevirtual` instruction to the method to call an instance method on an object.
+
+            The `invokevirtual` instruction calls an instance method on an object.
+            The object reference and the arguments for the method must be on the operand stack in the correct order before executing this instruction.
+            If the method has a return value, it will be pushed onto the operand stack.
+
+            **Operand Stack:** (*objectRef* is the reference to the object, *arg1*, *arg2*, ..., *argN* are the arguments for the method, and *returnValue* is the return value of the method if it has one.)
+
+            { ... , *objectRef* , *arg1* , *arg2* , ... , *argN* } → { ... , *returnValue* }
+
+            @param objectType - The type of the object containing the instance method (e.g., `java.lang.String`).
+            @param methodName - The name of the instance method.
+            @param paramTypes - An array of parameter types for the method (e.g., `int`, `java.lang.String`, etc.).
+            @param returnType - The return type of the method (e.g., `int`, `java.lang.String`, or `void`).
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder invokeVirtual(String objectType, String methodName, String[] paramTypes, String returnType) {
+            this.methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, objectType.replace(".", "/"), methodName, DescriptorUtils.toMethodDescriptor(paramTypes, returnType), false);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `invokespecial` instruction to the method to call a special instance method, such as a constructor or a private method.
+
+            The `invokespecial` instruction is used to call special instance methods, including constructors and private methods.
+            The object reference and the arguments for the method must be on the operand stack in the correct order before executing this instruction.
+            If the method has a return value, it will be pushed onto the operand stack.
+
+            **Operand Stack:** (*objectRef* is the reference to the object, *arg1*, *arg2*, ..., *argN* are the arguments for the method, and *returnValue* is the return value of the method if it has one.)
+
+            { ... , *objectRef* , *arg1* , *arg2* , ... , *argN* } → { ... , *returnValue* }
+
+            @param objectType - The type of the object containing the special instance method (e.g., `java.lang.String`).
+            @param methodName - The name of the special instance method.
+            @param paramTypes - An array of parameter types for the method (e.g., `int`, `java.lang.String`, etc.).
+            @param returnType - The return type of the method (e.g., `int`, `java.lang.String`, or `void`).
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder invokeSpecial(String objectType, String methodName, String[] paramTypes, String returnType) {
+            this.methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, objectType.replace(".", "/"), methodName, DescriptorUtils.toMethodDescriptor(paramTypes, returnType), false);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `invokestatic` instruction to the method to call a static method from a specified class.
+
+            The `invokestatic` instruction calls a static method from a specified class.
+            The arguments for the method must be on the operand stack in the correct order before executing this instruction.
+            If the method has a return value, it will be pushed onto the operand stack.
+
+            **Operand Stack:** (*arg1*, *arg2*, ..., *argN* are the arguments for the method, and *returnValue* is the return value of the method if it has one.)
+
+            { ... , *arg1* , *arg2* , ... , *argN* } → { ... , *returnValue* }
+
+            @param className - The class containing the static method.
+                Use full qualified name (e.g., `java.lang.Math`).
+            @param methodName - The name of the static method.
+            @param paramTypes - An array of parameter types for the method (e.g., `int`, `java.lang.String`, etc.).
+            @param returnType - The return type of the method (e.g., `int`, `java.lang.String`, or `void`).
+            @returns This `MethodCodeBuilder` instance.
+            @throws `IllegalAccessException` if the specified class is not allowed to be accessed.
+            """
+        )
+        public MethodCodeBuilder invokeStatic(String className, String methodName, String[] paramTypes, String returnType) throws IllegalAccessException {
+            checkIfClassAllowed(className);
+            this.methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, className.replace(".", "/"), methodName, DescriptorUtils.toMethodDescriptor(paramTypes, returnType), false);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `invokeinterface` instruction to the method to call an interface method on an object.
+
+            The `invokeinterface` instruction calls an interface method on an object.
+            The object reference and the arguments for the method must be on the operand stack in the correct order before executing this instruction.
+            If the method has a return value, it will be pushed onto the operand stack.
+
+            **Operand Stack:** (*objectRef* is the reference to the object, *arg1*, *arg2*, ..., *argN* are the arguments for the method, and *returnValue* is the return value of the method if it has one.)
+
+            { ... , *objectRef* , *arg1* , *arg2* , ... , *argN* } → { ... , *returnValue* }
+
+            @param interfaceType - The type of the interface containing the method (e.g., `java.util.List`).
+            @param methodName - The name of the interface method.
+            @param paramTypes - An array of parameter types for the method (e.g., `int`, `java.lang.String`, etc.).
+            @param returnType - The return type of the method (e.g., `int`, `java.lang.String`, or `void`).
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder invokeInterface(String interfaceType, String methodName, String[] paramTypes, String returnType) {
+            this.methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, interfaceType.replace(".", "/"), methodName, DescriptorUtils.toMethodDescriptor(paramTypes, returnType), true);
+            return this;
+        }
+
+        // @Info(
+        //     """
+        //     Automatically generates a `invokedynamic` instruction to invoke a JavaScript function.
+
+        //     @param methodName The name of the method to invoke.
+        //     @param paramTypes - An array of parameter types for the method (e.g., `int`, `java.lang.String`, etc.).
+        //     @param returnType - The return type of the method (e.g., `int`, `java.lang.String`, or `void`).
+        //     @param jsFunction - The JavaScript function to invoke.
+        //     """
+        // )
+        // public MethodCodeBuilder invokeJavaScript(String methodName, String[] paramTypes, String returnType, Function jsFunction) {
+        //     Handle handle = new Handle(
+        //         Opcodes.H_INVOKEINTERFACE,
+        //         Function.class.getName(),
+        //         "call",
+        //         returnType,
+        //         false);
+        // }
+
+        @Info(
+            """
+            Add a `new` instruction to the method to create a new object of a specified class.
+
+            The `new` instruction creates a new instance of the specified class and pushes its reference onto the operand stack.
+
+            **Note:** The created object is **NOT** initialized. You must call the constructor (using `invokespecial`) to initialize the object before using it.
+                You can also use the `newAndConstructObject` method to create and initialize an object in one step.
+
+            **Operand Stack:** (*objectRef* is the reference to the newly created object.)
+
+            { ... } → { ... , *objectRef* }
+
+            @param className - The name of the class to instantiate (e.g., `java.lang.String`).
+            @returns This `MethodCodeBuilder` instance.
+            @throws `IllegalAccessException` if the specified class is denied by the `ClassFilter`.
+            """
+        )
+        public MethodCodeBuilder newObject(String className) throws IllegalAccessException {
+            checkIfClassAllowed(className);
+            this.methodVisitor.visitTypeInsn(Opcodes.NEW, className.replace(".", "/"));
+            return this;
+        }
+
+        @Info(
+            """
+            Add instructions to the method to create a new object of a specified class and invoke its constructor.
+
+            This method combines the `new` instruction to create a new instance of the specified class
+            and the `invokespecial` instruction to call the constructor of that class.
+
+            **Operand Stack:** (*objectRef* is the reference to the newly created object.)
+
+            { ... } → { ... , *objectRef* }
+
+            **Note:** This method is equvilant to:
+
+            ```javascript
+            .newObject(className)
+            .duplicate()
+            .invokeSpecial("className", "<init>", constructorParamTypes, "void")
+            ```
+
+            @param className - The name of the class to instantiate (e.g., `java.lang.String`).
+            @param constructorParamTypes - An array of parameter types for the constructor (e.g., `int`, `java.lang.String`, etc.).
+            @returns This `MethodCodeBuilder` instance.
+            @throws `IllegalAccessException` if the specified class is denied by the `ClassFilter`.
+            """
+        )
+        public MethodCodeBuilder newAndConstructObject(String className, String[] constructorParamTypes) throws IllegalAccessException {
+            this.newObject(className)
+                .duplicate()
+                .invokeSpecial(className, "<init>", constructorParamTypes, "void");
             return this;
         }
 
