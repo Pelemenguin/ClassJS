@@ -3400,6 +3400,8 @@ public class MethodCreator {
             """
             Add instructions to the method to create a new object of a specified class and invoke its constructor.
 
+            The constructor is assumed to have **no parameters** (i.e., the default constructor).
+
             This method combines the `new` instruction to create a new instance of the specified class
             and the `invokespecial` instruction to call the constructor of that class.
 
@@ -3412,20 +3414,65 @@ public class MethodCreator {
             ```javascript
             .newObject(className)
             .duplicate()
-            .invokeSpecial("className", "<init>", constructorParamTypes, "void")
+            .invokeSpecial("className", "<init>", [], "void")
             ```
 
             @param className - The name of the class to instantiate (e.g., `java.lang.String`).
-            @param constructorParamTypes - An array of parameter types for the constructor (e.g., `int`, `java.lang.String`, etc.).
             @returns This `MethodCodeBuilder` instance.
             @throws `IllegalAccessException` if the specified class is denied by the `ClassFilter`.
             """
         )
-        public MethodCodeBuilder newAndConstructObject(String className, String[] constructorParamTypes) throws IllegalAccessException {
+        public MethodCodeBuilder newAndConstructObject(String className) throws IllegalAccessException {
             this.newObject(className)
                 .duplicate()
-                .invokeSpecial(className, "<init>", constructorParamTypes, "void");
+                .invokeSpecial(className, "<init>", new String[0], "void");
             return this;
+        }
+
+        @Info(
+            """
+            Add instructions to the method to create a new object of a specified class and invoke its constructor with parameters.
+
+            This method combines the `new` instruction to create a new instance of the specified class,
+            and the `invokespecial` instruction to call the constructor of that class with the provided parameters.
+
+            **Operand Stack:** (*objectRef* is the reference to the newly created object, *arg1*, *arg2*, ..., *argN* are the arguments for the constructor.
+                *uninitializedObjectRef* is a special marker representing an uninitialized object reference.)
+
+            { ... }  → { ... , *uninitializedObjectRef* , *uninitializedObjectRef*}
+            
+            (Then the passed `beforeInvoking` consumer is called to push constructor arguments onto the operand stack.)
+
+            → { ... , *uninitializedObjectRef* , *uninitializedObjectRef* , *arg1* , *arg2* , ... , *argN* }
+
+            (Final result below)
+
+            → { ... , *objectRef* }
+
+            **Note:** This method is equvilant to:
+
+            ```javascript
+            .newObject(className)
+            .duplicate()
+            // Push constructor arguments here
+            .invokeSpecial("className", "<init>", paramTypes, "void")
+            ```
+
+            @param className - The name of the class to instantiate (e.g., `java.lang.String`).
+            @param paramTypes - An array of parameter types for the constructor (e.g., `int`, `java.lang.String`, etc.).
+                The types must match the types of the arguments pushed onto the operand stack before calling this method.
+            @param beforeInvoking - A consumer that accepts this `MethodCodeBuilder` instance.
+                Use this consumer to push the constructor arguments onto the operand stack.
+                The arguments must be pushed in the correct order (i.e., from first to last).
+            @returns This `MethodCodeBuilder` instance.
+            @throws `IllegalAccessException` if the specified class is denied by the `ClassFilter`.
+            """
+        )
+        public MethodCodeBuilder newAndConstructObject(String className, String[] paramTypes, Consumer<MethodCodeBuilder> beforeInvoking) throws IllegalAccessException {
+            this.newObject(className)
+                .duplicate();
+            beforeInvoking.accept(this);
+            return this.invokeSpecial(className, "<init>", paramTypes, "void");
         }
 
         @Info(
@@ -3509,6 +3556,29 @@ public class MethodCreator {
         )
         public MethodCodeBuilder getArrayLength() {
             this.methodVisitor.visitInsn(Opcodes.ARRAYLENGTH);
+            return this;
+        }
+
+        @Info(
+            """
+            Add an `athrow` instruction to the method to throw an exception.
+
+            The `athrow` instruction throws an exception object that is on the top of the operand stack.
+            The exception object must be a reference type that is a subclass of `java.lang.Throwable`.
+
+            **Operand Stack:** (*throwable* is the exception object to be thrown.)
+
+            { ... , *throwable* } → { *throwable* }
+
+            **Note:** After the `athrow` instruction is executed, all values on the operand stack are cleared,
+                and the control flow is transferred to the nearest enclosing exception handler that can handle the thrown exception type.
+                If found, the operand stack will then contain only the thrown exception object's reference.
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder throwObject() {
+            this.methodVisitor.visitInsn(Opcodes.ATHROW);
             return this;
         }
 
