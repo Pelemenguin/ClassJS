@@ -5,7 +5,7 @@ import javax.annotation.Nullable;
 import org.objectweb.asm.Opcodes;
 
 import dev.latvian.mods.kubejs.typings.Info;
-import pelemenguin.util.DescriptorUtils;
+import pelemenguin.classjs.util.DescriptorUtils;
 
 public class FieldCreator {
 

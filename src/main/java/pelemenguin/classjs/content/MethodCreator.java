@@ -15,7 +15,7 @@ import org.objectweb.asm.Opcodes;
 import dev.latvian.mods.kubejs.typings.Info;
 import dev.latvian.mods.kubejs.util.ConsoleJS;
 import pelemenguin.classjs.ClassJS;
-import pelemenguin.util.DescriptorUtils;
+import pelemenguin.classjs.util.DescriptorUtils;
 
 public class MethodCreator {
 

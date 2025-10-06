@@ -5,7 +5,7 @@ import org.objectweb.asm.Opcodes;
 
 import dev.latvian.mods.kubejs.typings.Info;
 import dev.latvian.mods.kubejs.util.ConsoleJS;
-import pelemenguin.util.ClassJSClassLoader;
+import pelemenguin.classjs.util.ClassJSClassLoader;
 
 @Info("A class for Java classes creation.")
 public class ClassCreator {

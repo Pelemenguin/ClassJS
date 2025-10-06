@@ -1,4 +1,4 @@
-package pelemenguin.util;
+package pelemenguin.classjs.util;
 
 import java.util.HashMap;
 
