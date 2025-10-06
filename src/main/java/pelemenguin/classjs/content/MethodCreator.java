@@ -3623,6 +3623,51 @@ public class MethodCreator {
             return this;
         }
 
+        @Info(
+            """
+            Add a `monitorenter` instruction to the method to acquire a monitor lock on an object.
+
+            The `monitorenter` instruction is used to acquire a monitor lock on the object whose reference is on the top of the operand stack.
+            This is typically used in synchronized blocks or methods to ensure that only one thread can execute the synchronized code at a time.
+
+            **Operand Stack:** (*objectRef* is the reference to the object whose monitor lock is being acquired.)
+
+            { ... , *objectRef* } → { ... }
+
+            **Note:** After executing `monitorenter`, the object reference is removed from the operand stack.
+                You **MUST** manage to keep the object's reference.
+                (For example, keep it in a local variable before calling `monitorenter`.)
+                As you **MUST** `monitorexit` the object again.
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder monitorEnter() {
+            this.methodVisitor.visitInsn(Opcodes.MONITORENTER);
+            return this;
+        }
+
+        @Info(
+            """
+            Add a `monitorexit` instruction to the method to release a monitor lock on an object.
+
+            The `monitorexit` instruction is used to release a monitor lock on the object whose reference is on the top of the operand stack.
+            This is typically used in synchronized blocks or methods to allow other threads to acquire the lock.
+
+            **Operand Stack:** (*objectRef* is the reference to the object whose monitor lock is being released.)
+
+            { ... , *objectRef* } → { ... }
+
+            **Note:** After executing `monitorexit`, the object reference is removed from the operand stack.
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder monitorExit() {
+            this.methodVisitor.visitInsn(Opcodes.MONITOREXIT);
+            return this;
+        }
+
         private static final String ERROR_INFO_PATTERN = """
             Well, ASM has thrown a(n) %s during computing stack map table.
             Here are some possible reasons:
