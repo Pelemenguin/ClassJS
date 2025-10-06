@@ -3493,6 +3493,25 @@ public class MethodCreator {
             return this;
         }
 
+        @Info(
+            """
+            Add an `arraylength` instruction to the method to get the length of an array.
+
+            The `arraylength` instruction retrieves the length of an array and pushes it onto the operand stack.
+            The array reference must be on the top of the operand stack before executing this instruction.
+
+            **Operand Stack:** (*arrayref* is the reference to the array, and *length* is the length of the array.)
+
+            { ... , *arrayref* } → { ... , *length* }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder getArrayLength() {
+            this.methodVisitor.visitInsn(Opcodes.ARRAYLENGTH);
+            return this;
+        }
+
         private static final String ERROR_INFO_PATTERN = """
             Well, ASM has thrown a(n) %s during computing stack map table.
             Here are some possible reasons:
