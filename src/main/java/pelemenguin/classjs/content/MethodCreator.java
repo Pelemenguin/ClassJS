@@ -3742,6 +3742,75 @@ public class MethodCreator {
             return this;
         }
 
+        @Info(
+            """
+            Add a `multianewarray` instruction to the method to create a new multi-dimensional array.
+
+            The `multianewarray` instruction creates a new multi-dimensional array of the specified type and dimensions,
+            and pushes its reference onto the operand stack.
+            The sizes of each dimension are determined by the integer values on the top of the operand stack.
+
+            **Operand Stack:** (*count1*, *count2*, ..., *countN* are the sizes of each dimension, and *arrayref* is the reference to the new multi-dimensional array.)
+
+            { ... , *count1* , *count2* , ... , *countN* } → { ... , *arrayref* }
+
+            @param arrayElementType - The type of elements in the new array (e.g., `int`, `java.lang.String`, etc.).
+            @param dimension - The number of dimensions for the new array (e.g., `2` for a 2D array).
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder newMultiArray(String arrayElementType, int dimension) {
+            String descriptor = DescriptorUtils.toFieldDescriptor(arrayElementType);
+            this.methodVisitor.visitMultiANewArrayInsn("[".repeat(dimension) + descriptor, dimension);
+            return this;
+        }
+
+        @Info(
+            """
+            Start an `if` statement that checks if the top integer on the operand stack is non-`null`.
+
+            The `ifNonNull` method pops the top object reference from the operand stack and checks if it is not `null`.
+            If the value is non-`null`, execution continues with the next instruction; otherwise, execution jumps to the instruction after the corresponding `fi()` or `else()`.
+
+            This method must be paired with a subsequent call to `fi()` to close the `if` statement.
+
+            **Note:** `undefined` is treated as **non-`null`**.
+
+            **Operand Stack:** (*objectRef* is the reference to the object being checked.)
+
+            { ... , *objectRef* } → { ... }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder ifNonNull() {
+            this.ifHelper(Opcodes.IFNULL, "ifNonNull()");
+            return this;
+        }
+
+        @Info(
+            """
+            Start an `if` statement that checks if the top integer on the operand stack is `null`.
+
+            The `ifNull` method pops the top object reference from the operand stack and checks if it is `null`.
+            If the value is `null`, execution continues with the next instruction; otherwise, execution jumps to the instruction after the corresponding `fi()` or `else()`.
+
+            This method must be paired with a subsequent call to `fi()` to close the `if` statement.
+
+            **Note:** `undefined` is treated as **non-`null`**.
+
+            **Operand Stack:** (*objectRef* is the reference to the object being checked.)
+
+            { ... , *objectRef* } → { ... }
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder ifNull() {
+            this.ifHelper(Opcodes.IFNONNULL, "ifNull()");
+            return this;
+        }
+
         private static final String ERROR_INFO_PATTERN = """
             Well, ASM has thrown a(n) %s during computing stack map table.
             Here are some possible reasons:
