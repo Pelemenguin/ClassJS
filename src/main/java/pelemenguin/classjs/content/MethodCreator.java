@@ -1,5 +1,7 @@
 package pelemenguin.classjs.content;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -16,8 +18,10 @@ import dev.latvian.mods.kubejs.KubeJS;
 import dev.latvian.mods.kubejs.script.ScriptManager;
 import dev.latvian.mods.kubejs.typings.Info;
 import dev.latvian.mods.kubejs.util.ConsoleJS;
+import dev.latvian.mods.rhino.Function;
 import pelemenguin.classjs.ClassJS;
 import pelemenguin.classjs.util.DescriptorUtils;
+import pelemenguin.classjs.util.InvokeDynamicHelper;
 
 public class MethodCreator {
 
@@ -2116,13 +2120,13 @@ public class MethodCreator {
 
             { ... } → { ... }
 
-            @param varIndex - The index of the local variable to be incremented. Must be a non-negative integer.
+            @param varIndex - The name of the local variable to increase.
             @param increment - The constant value to add to the local variable. Can be positive or negative.
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder intIncrease(int varIndex, int increment) {
-            this.methodVisitor.visitIincInsn(varIndex, increment);
+        public MethodCodeBuilder intIncrease(String variableName, int increment) {
+            this.methodVisitor.visitIincInsn(this.getVariableIndexOrThrow(variableName), increment);
             return this;
         }
 
@@ -3361,24 +3365,36 @@ public class MethodCreator {
             return this;
         }
 
-        // @Info(
-        //     """
-        //     Automatically generates a `invokedynamic` instruction to invoke a JavaScript function.
+        private int anonymousFunctionCounter = 0;
+        private String generateFuncId() {
+            return this.parent.parent.getClassName() + "/" + this.parent.name + "@" + (this.anonymousFunctionCounter ++);
+        }
 
-        //     @param methodName The name of the method to invoke.
-        //     @param paramTypes - An array of parameter types for the method (e.g., `int`, `java.lang.String`, etc.).
-        //     @param returnType - The return type of the method (e.g., `int`, `java.lang.String`, or `void`).
-        //     @param jsFunction - The JavaScript function to invoke.
-        //     """
-        // )
-        // public MethodCodeBuilder invokeJavaScript(String methodName, String[] paramTypes, String returnType, Function jsFunction) {
-        //     Handle handle = new Handle(
-        //         Opcodes.H_INVOKEINTERFACE,
-        //         Function.class.getName(),
-        //         "call",
-        //         returnType,
-        //         false);
-        // }
+        @Info(
+            """
+            Automatically generates a `invokedynamic` instruction to invoke a JavaScript function.
+
+            @param paramTypes - An array of parameter types for the method (e.g., `int`, `java.lang.String`, etc.).
+            @param returnType - The return type of the method (e.g., `int`, `java.lang.String`, or `void`).
+            @param jsFunction - The JavaScript function to invoke.
+
+            @throws `NoSuchMethodException`
+            @throws `IllegalAccessException`
+            """
+        )
+        public MethodCodeBuilder invokeJS(String[] paramTypes, String returnType, Function jsFunction) throws NoSuchMethodException, IllegalAccessException, IllegalArgumentException, TypeNotPresentException {
+            String funcName = this.generateFuncId();
+            String funcDesc = DescriptorUtils.toMethodDescriptor(paramTypes, returnType);
+            InvokeDynamicHelper.registerFunction(
+                funcName,
+                jsFunction,
+                MethodType.fromMethodDescriptorString(funcDesc, ClassLoader.getSystemClassLoader()),
+                MethodHandles.lookup()
+            );
+
+            this.methodVisitor.visitInvokeDynamicInsn("callJS", funcDesc, InvokeDynamicHelper.HANDLE, funcName);
+            return this;
+        }
 
         @Info(
             """
