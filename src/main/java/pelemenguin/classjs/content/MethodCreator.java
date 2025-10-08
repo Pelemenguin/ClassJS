@@ -1510,7 +1510,7 @@ public class MethodCreator {
             """
         )
         public MethodCodeBuilder doubleAdd() {
-            this.methodVisitor.visitInsn(Opcodes.DOUBLE);
+            this.methodVisitor.visitInsn(Opcodes.DADD);
             return this;
         }
 
@@ -3834,13 +3834,7 @@ public class MethodCreator {
                 1. Stack Underflow: Some execution paths pop more values from the stack than were pushed.
 
                     [Example]
-                        .gotoLabel("goto")
-                        .labelNext("pop")
                         .pop()                // Pop a value here, but no value is on the stack.
-                        .gotoLabel("return")
-                        .labelNext("goto")
-                        .gotoLabel("pop")
-                        .labelNext("return")
                         .returnVoid()
 
                 2. Control Flow Mismatch: Different branches of if/else statements leave different stack heights.
@@ -3895,7 +3889,7 @@ public class MethodCreator {
 
             try {
                 methodVisitor.visitMaxs(0, 0);
-            } catch (NegativeArraySizeException e) {
+            } catch (Exception e) {
                 ConsoleJS.STARTUP.error(ERROR_INFO_PATTERN.formatted(e.getClass().getName()));
                 throw e;
             }
