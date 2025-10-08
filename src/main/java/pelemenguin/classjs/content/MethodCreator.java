@@ -439,7 +439,8 @@ public class MethodCreator {
             }
 
             public static enum ScopeType {
-                IF, ELSE, CASE, SYNCHRONIZED
+                IF, ELSE, CASE, SYNCHRONIZED,
+                FOR_LOOP, WHILE_LOOP
             }
         }
 
@@ -492,6 +493,50 @@ public class MethodCreator {
                 }
             }
         }
+
+        // HELPER METHODS
+
+        public MethodCodeBuilder forLoop(Consumer<MethodCodeBuilder> initialization, Consumer<MethodCodeBuilder> condition, Consumer<MethodCodeBuilder> update) {
+            String labelName = this.newAnonymousLableName();
+
+            initialization.accept(this);
+            this.labelNext(labelName);
+            condition.accept(this);
+
+            ScopeInfo scopeInfo = new ScopeInfo(ScopeInfo.ScopeType.FOR_LOOP, labelName, new Consumer[] {update});
+            this.scopes.addLast(scopeInfo);
+            return this;
+        }
+
+        public MethodCodeBuilder whileLoop(Consumer<MethodCodeBuilder> condition) {
+            String labelName = this.newAnonymousLableName();
+
+            this.labelNext(labelName);
+            condition.accept(this);
+
+            ScopeInfo scopeInfo = new ScopeInfo(ScopeInfo.ScopeType.WHILE_LOOP, labelName);
+            this.scopes.addLast(scopeInfo);
+            return this;
+        }
+
+        public MethodCodeBuilder endLoop() {
+            ScopeInfo scopeInfo = this.scopes.removeLast();
+            if (scopeInfo.type == ScopeInfo.ScopeType.FOR_LOOP) {
+                @SuppressWarnings("unchecked")
+                Consumer<MethodCodeBuilder> update = (Consumer<MethodCodeBuilder>) scopeInfo.extraInfo[0];
+                update.accept(this);
+                this.gotoLabel(scopeInfo.targetLabelName)
+                    .fi();
+            } else if (scopeInfo.type == ScopeInfo.ScopeType.WHILE_LOOP) {
+                this.gotoLabel(scopeInfo.targetLabelName)
+                    .fi();
+            } else {
+                throw new IllegalStateException("No loops to end.");
+            }
+            return this;
+        }
+
+        // Byte Code
 
         @Info(
             """
