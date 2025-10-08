@@ -343,6 +343,15 @@ public class ClassCreator {
         return new MethodCreator(this, name, paramTypes, returnType);
     }
 
+    @Info(
+        """
+        Create a new field.
+
+        @param name - The field name.
+        @param type - The field type. Use full qualified name with `.` seperated.
+            For example, `int`, `java.lang.Object`(not just `Object`), `java.lang.String`.
+        """
+    )
     public FieldCreator createField(String name, String type) {
         this.ensureHeadVisited();
         return new FieldCreator(this, name, type);

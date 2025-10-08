@@ -158,7 +158,7 @@ public class DescriptorUtils {
 
         See {@linkcode toMethodDescriptor} for more information.
         
-        **Note:** The last element of the array is the return type.
+        **Note:** The first element of the array is the return type.
 
         @param descriptor - A method descriptor.
 
@@ -166,10 +166,10 @@ public class DescriptorUtils {
         // ["void"]
         console.info(DescriptorUtils.fromMethodDescriptor("()V"));
 
-        // ["int", "java.lang.Object[]", "float"]
+        // ["float", "int", "java.lang.Object[]"]
         console.info(DescriptorUtils.fromMethodDescriptor("(I[Ljava/lang/Object;)F"));
 
-        // ["java.lang.String[]", "java.lang.String"]
+        // ["java.lang.String", "java.lang.String[]"]
         console.info(DescriptorUtils.fromMethodDescriptor("([Ljava/lang/String;)Ljava/lang/String;"));
         """
     )
@@ -223,9 +223,9 @@ public class DescriptorUtils {
         // Combine parameter types and return type into a single array
         String[] result = new String[paramTypes.size() + 1];
         for (int i = 0; i < paramTypes.size(); i++) {
-            result[i] = paramTypes.get(i);
+            result[i + 1] = paramTypes.get(i);
         }
-        result[paramTypes.size()] = returnType;
+        result[0] = returnType;
 
         return result;
     }

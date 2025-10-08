@@ -400,6 +400,31 @@ public class MethodCreator {
         return this.parent;
     }
 
+    public ClassCreator codeJS(Function jsFunction) throws NoSuchMethodException, IllegalAccessException, IllegalArgumentException, TypeNotPresentException {
+        String[] params = DescriptorUtils.fromMethodDescriptor(this.descriptor);
+        MethodCodeBuilder mcb = new MethodCodeBuilder(this);
+        for (int i = 1; i < params.length; i ++) {
+            String varName = "arg" + (i - 1);
+            switch (params[i]) {
+                case "int", "boolean", "byte", "char", "short": mcb.loadInt(varName); break;
+                case "float": mcb.loadFloat(varName); break;
+                case "double": mcb.loadDouble(varName); break;
+                case "long": mcb.loadLong(varName); break;
+                default: mcb.loadObject(varName); break;
+            }
+        }
+        mcb.invokeJS(this.descriptor, jsFunction);
+        switch (params[0]) {
+            case "void": mcb.returnVoid(); break;
+            case "int", "boolean", "byte", "char", "short": mcb.returnInt(); break;
+            case "float": mcb.returnFloat(); break;
+            case "double": mcb.returnDouble(); break;
+            case "long": mcb.returnLong(); break;
+            default: mcb.returnObject(); break;
+        }
+        return mcb.build();
+    }
+
     @Override
     public String toString() {
         return "MethodCreator(name=" + this.name + ", parent=" + this.parent + ")";
@@ -446,19 +471,19 @@ public class MethodCreator {
             String[] tempVarNames = this.parent.paramNames;
             if (tempVarNames == null) {
                 tempVarNames = new String[paramTypes.length - 1];
-                for (int i = 0; i < paramTypes.length - 1; i ++) {
-                    tempVarNames[i] = "arg" + i;
+                for (int i = 1; i < paramTypes.length; i ++) {
+                    tempVarNames[i - 1] = "arg" + (i - 1);
                 }
             } else if (tempVarNames.length != paramTypes.length - 1) {
                 throw new IllegalArgumentException("Parameter names count does not match parameter types count");
             }
 
-            for (int i = 0; i < paramTypes.length - 1; i ++) {
+            for (int i = 1; i < paramTypes.length; i ++) {
                 boolean type = switch (paramTypes[i]) {
                     case "long", "double" -> true;
                     default -> false;
                 };
-                String name = tempVarNames[i];
+                String name = tempVarNames[i - 1];
                 this.localVariableNames.add(name);
                 this.localVariableTypes.add(type);
                 if (type) {
@@ -817,7 +842,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder getIntFromArray() {
+        public MethodCodeBuilder loadIntFromArray() {
             this.methodVisitor.visitInsn(Opcodes.IALOAD);
             return this;
         }
@@ -837,7 +862,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder getLongFromArray() {
+        public MethodCodeBuilder loadLongFromArray() {
             this.methodVisitor.visitInsn(Opcodes.LALOAD);
             return this;
         }
@@ -857,7 +882,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder getFloatFromArray() {
+        public MethodCodeBuilder loadFloatFromArray() {
             this.methodVisitor.visitInsn(Opcodes.FALOAD);
             return this;
         }
@@ -877,7 +902,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder getDoubleFromArray() {
+        public MethodCodeBuilder loadDoubleFromArray() {
             this.methodVisitor.visitInsn(Opcodes.DALOAD);
             return this;
         }
@@ -897,7 +922,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder getObjectFromArray() {
+        public MethodCodeBuilder loadObjectFromArray() {
             this.methodVisitor.visitInsn(Opcodes.AALOAD);
             return this;
         }
@@ -917,7 +942,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder getByteFromArray() {
+        public MethodCodeBuilder loadByteFromArray() {
             this.methodVisitor.visitInsn(Opcodes.BALOAD);
             return this;
         }
@@ -937,7 +962,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder getCharFromArray() {
+        public MethodCodeBuilder loadCharFromArray() {
             this.methodVisitor.visitInsn(Opcodes.CALOAD);
             return this;
         }
@@ -957,7 +982,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder getShortFromArray() {
+        public MethodCodeBuilder loadShortFromArray() {
             this.methodVisitor.visitInsn(Opcodes.SALOAD);
             return this;
         }
@@ -1098,7 +1123,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder putIntToArray() {
+        public MethodCodeBuilder storeIntIntoArray() {
             this.methodVisitor.visitInsn(Opcodes.IASTORE);
             return this;
         }
@@ -1118,7 +1143,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder putLongToArray() {
+        public MethodCodeBuilder storeLongIntoArray() {
             this.methodVisitor.visitInsn(Opcodes.LASTORE);
             return this;
         }
@@ -1137,7 +1162,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder putFloatToArray() {
+        public MethodCodeBuilder storeFloatIntoArray() {
             this.methodVisitor.visitInsn(Opcodes.FASTORE);
             return this;
         }
@@ -1157,7 +1182,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder putDoubleToArray() {
+        public MethodCodeBuilder storeDoubleIntoArray() {
             this.methodVisitor.visitInsn(Opcodes.DASTORE);
             return this;
         }
@@ -1176,7 +1201,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder putObjectToArray() {
+        public MethodCodeBuilder storeObjectIntoArray() {
             this.methodVisitor.visitInsn(Opcodes.AASTORE);
             return this;
         }
@@ -1195,7 +1220,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder putByteToArray() {
+        public MethodCodeBuilder storeByteIntoArray() {
             this.methodVisitor.visitInsn(Opcodes.BASTORE);
             return this;
         }
@@ -1214,7 +1239,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder putCharToArray() {
+        public MethodCodeBuilder storeCharIntoArray() {
             this.methodVisitor.visitInsn(Opcodes.CASTORE);
             return this;
         }
@@ -1233,7 +1258,7 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder putShortToArray() {
+        public MethodCodeBuilder storeShortIntoArray() {
             this.methodVisitor.visitInsn(Opcodes.SASTORE);
             return this;
         }
@@ -3383,16 +3408,20 @@ public class MethodCreator {
             """
         )
         public MethodCodeBuilder invokeJS(String[] paramTypes, String returnType, Function jsFunction) throws NoSuchMethodException, IllegalAccessException, IllegalArgumentException, TypeNotPresentException {
-            String funcName = this.generateFuncId();
             String funcDesc = DescriptorUtils.toMethodDescriptor(paramTypes, returnType);
+            return this.invokeJS(funcDesc, jsFunction);
+        }
+
+        private MethodCodeBuilder invokeJS(String descriptor, Function jsFunction) throws NoSuchMethodException, IllegalAccessException, IllegalArgumentException, TypeNotPresentException {
+            String funcName = this.generateFuncId();
             InvokeDynamicHelper.registerFunction(
                 funcName,
                 jsFunction,
-                MethodType.fromMethodDescriptorString(funcDesc, ClassLoader.getSystemClassLoader()),
+                MethodType.fromMethodDescriptorString(descriptor, ClassLoader.getSystemClassLoader()),
                 MethodHandles.lookup()
             );
 
-            this.methodVisitor.visitInvokeDynamicInsn("callJS", funcDesc, InvokeDynamicHelper.HANDLE, funcName);
+            this.methodVisitor.visitInvokeDynamicInsn("callJS", descriptor, InvokeDynamicHelper.HANDLE, funcName);
             return this;
         }
 
