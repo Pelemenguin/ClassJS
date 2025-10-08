@@ -14,8 +14,6 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
-import dev.latvian.mods.kubejs.KubeJS;
-import dev.latvian.mods.kubejs.script.ScriptManager;
 import dev.latvian.mods.kubejs.typings.Info;
 import dev.latvian.mods.kubejs.util.ConsoleJS;
 import dev.latvian.mods.rhino.Function;
@@ -496,6 +494,39 @@ public class MethodCreator {
 
         // HELPER METHODS
 
+        @Info(
+            """
+            Enters a `for` loop scope.
+
+            The loop consists of three parts: initialization, condition, and update.
+            The initialization part is executed once before the loop starts.
+            The condition part is executed before each iteration of the loop.
+            If the condition evaluates to `true`, the loop body is executed.
+            After the loop body, the update part is executed.
+            To exit the loop scope, call the `endLoop()` method.
+
+            It is better not to let them modify the stack height.
+            For example, `.loadInt("i").ifPositive()` is better than `.ifPositive()` because the latter modifies the stack height.
+
+            The condition part **MUST** be a valid method to begin an if scope.
+
+            @param initialization - A consumer that adds bytecode for the initialization part.
+            @param condition - A consumer that adds bytecode for the condition part.
+            @param update - A consumer that adds bytecode for the update part.
+            @returns This `MethodCodeBuilder` instance.
+
+            @example
+            // for (let i = 0; i < 10; i++) { ... }
+            ... Other code ...
+            .forLoop(
+                mb => mb.pushInt(0).storeInt("i"), // initialization
+                mb => mb.loadInt("i").pushInt(10).ifLessThan("loopBody"), // condition
+                mb => mb.intIncrease("i", 1) // update
+            )
+                ... Loop body ...
+            .endLoop() // End loop here
+            """
+        )
         public MethodCodeBuilder forLoop(Consumer<MethodCodeBuilder> initialization, Consumer<MethodCodeBuilder> condition, Consumer<MethodCodeBuilder> update) {
             String labelName = this.newAnonymousLableName();
 
@@ -508,6 +539,34 @@ public class MethodCreator {
             return this;
         }
 
+
+        @Info(
+            """
+            Enters a `while` loop scope.
+            
+            The loop consists of a condition part that is executed before each iteration of the loop.
+            If the condition evaluates to `true`, the loop body is executed.
+
+            The condition part **MUST** be a valid method to begin an if scope.
+
+            @param initialization - A consumer that adds bytecode for the initialization part.
+            @param condition - A consumer that adds bytecode for the condition part.
+            @param update - A consumer that adds bytecode for the update part.
+            @returns This `MethodCodeBuilder` instance.
+
+            @example
+            // let i = 0; while (i < 10) {...; i ++;}
+            ... Other code ...
+            .pushInt(0)
+            .storeInt("i")
+            .whileLoop(
+                mb => mb.loadInt("i").pushInt(10).ifLessThan("loopBody"), // condition
+            )
+                ... Loop body ...
+                .intIncrease("i", 1)
+            .endLoop() // End loop here
+            """
+        )
         public MethodCodeBuilder whileLoop(Consumer<MethodCodeBuilder> condition) {
             String labelName = this.newAnonymousLableName();
 
@@ -519,6 +578,15 @@ public class MethodCreator {
             return this;
         }
 
+        @Info(
+            """
+            Ends the current loop scope.
+
+            This method **MUST** be called after entering a loop scope using `forLoop()` or `whileLoop()`.
+
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
         public MethodCodeBuilder endLoop() {
             ScopeInfo scopeInfo = this.scopes.removeLast();
             if (scopeInfo.type == ScopeInfo.ScopeType.FOR_LOOP) {
@@ -3264,7 +3332,7 @@ public class MethodCreator {
             """
         )
         public MethodCodeBuilder getStaticField(String className, String fieldName, String fieldType) throws IllegalAccessException {
-            checkIfClassAllowed(className);
+            ClassCreator.checkIfClassAllowed(className);
             this.methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, className.replace(".", "/"), fieldName, DescriptorUtils.toFieldDescriptor(fieldType));
             return this;
         }
@@ -3287,7 +3355,7 @@ public class MethodCreator {
             """
         )
         public MethodCodeBuilder putStaticField(String className, String fieldName, String fieldType) throws IllegalAccessException {
-            checkIfClassAllowed(className);
+            ClassCreator.checkIfClassAllowed(className);
             this.methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, className.replace(".", "/"), fieldName, DescriptorUtils.toFieldDescriptor(fieldType));
             return this;
         }
@@ -3406,7 +3474,7 @@ public class MethodCreator {
             """
         )
         public MethodCodeBuilder invokeStatic(String className, String methodName, String[] paramTypes, String returnType) throws IllegalAccessException {
-            checkIfClassAllowed(className);
+            ClassCreator.checkIfClassAllowed(className);
             this.methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, className.replace(".", "/"), methodName, DescriptorUtils.toMethodDescriptor(paramTypes, returnType), false);
             return this;
         }
@@ -3489,7 +3557,7 @@ public class MethodCreator {
             """
         )
         public MethodCodeBuilder newObject(String className) throws IllegalAccessException {
-            checkIfClassAllowed(className);
+            ClassCreator.checkIfClassAllowed(className);
             this.methodVisitor.visitTypeInsn(Opcodes.NEW, className.replace(".", "/"));
             return this;
         }
@@ -3974,13 +4042,6 @@ public class MethodCreator {
             return this.parent.parent;
         }
 
-    }
-
-    private static void checkIfClassAllowed(String className) throws IllegalAccessException {
-        ScriptManager manager = KubeJS.getStartupScriptManager();
-        if (manager != null && !manager.isClassAllowed(className)) {
-            throw new IllegalAccessException("Disallowed class: " + className);
-        }
     }
 
 }

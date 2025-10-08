@@ -1,8 +1,12 @@
 package pelemenguin.classjs.content;
 
+import java.util.ArrayList;
+
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 
+import dev.latvian.mods.kubejs.KubeJS;
+import dev.latvian.mods.kubejs.script.ScriptManager;
 import dev.latvian.mods.kubejs.typings.Info;
 import dev.latvian.mods.kubejs.util.ConsoleJS;
 import pelemenguin.classjs.util.ClassJSClassLoader;
@@ -18,6 +22,8 @@ public class ClassCreator {
 
     private int version = Opcodes.V17;
     private int access = Opcodes.ACC_PUBLIC | Opcodes.ACC_SUPER;
+    private String superClass = "java/lang/Object";
+    private ArrayList<String> superInterfaces = new ArrayList<>();
 
     private boolean begunMethodCreation = false;
 
@@ -99,6 +105,49 @@ public class ClassCreator {
     public ClassCreator version(int version) {
         this.notBegunMethodCreationOrThrow();
         this.version = version;
+        return this;
+    }
+
+    @Info(
+        """
+        Specify the superclass of the class.
+        Default value is `java.lang.Object`.
+
+        @param superClassName - The full qualified name of the superclass. For example, `java.lang.Object` for Object class.
+        @returns This `ClassCreator` instance.
+
+        @throws `IllegalAccessException` if the specified class is denied by KubeJS script manager.
+
+        @example
+        // Create a class extending java.util.ArrayList
+        let arrayListClassCreator = ClassCreator.create("MyArrayList")
+            .extending("java.util.ArrayList");
+        """
+    )
+    public ClassCreator extending(String superClassName) throws IllegalAccessException {
+        checkIfClassAllowed(superClassName);
+        this.superClass = superClassName.replace(".", "/");
+        return this;
+    }
+
+    @Info(
+        """
+        Add an interface that the class implements.
+
+        @param superInterfaceName - The full qualified name of the interface. For example, `java.io.Serializable` for Serializable interface.
+        @returns This `ClassCreator` instance.
+
+        @throws `IllegalAccessException` if the specified class is denied by KubeJS script manager.
+
+        @example
+        // Create a class implementing java.io.Serializable
+        let serializableClassCreator = ClassCreator.create("MySerializableClass")
+            .implementing("java.io.Serializable");
+        """
+    )
+    public ClassCreator implementing(String superInterfaceName) throws IllegalAccessException {
+        checkIfClassAllowed(superInterfaceName);
+        this.superInterfaces.add(superInterfaceName.replace(".", "/"));
         return this;
     }
 
@@ -325,7 +374,7 @@ public class ClassCreator {
     private void ensureHeadVisited() {
         if (this.begunMethodCreation) return;
         this.begunMethodCreation = true;
-        this.classWriter.visit(this.version, this.access, this.getInternalName(), null, "java/lang/Object", null);
+        this.classWriter.visit(this.version, this.access, this.getInternalName(), null, this.superClass, this.superInterfaces.toArray(new String[0]));
     }
 
     @Info(
@@ -373,6 +422,13 @@ public class ClassCreator {
     @Override
     public String toString() {
         return "ClassCreator(" + this.getClassName() + ")";
+    }
+
+    static void checkIfClassAllowed(String className) throws IllegalAccessException {
+        ScriptManager manager = KubeJS.getStartupScriptManager();
+        if (manager != null && !manager.isClassAllowed(className)) {
+            throw new IllegalAccessException("Disallowed class: " + className);
+        }
     }
 
 }
