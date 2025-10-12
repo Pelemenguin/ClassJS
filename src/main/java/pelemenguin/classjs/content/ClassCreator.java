@@ -151,8 +151,6 @@ public class ClassCreator {
         return this;
     }
 
-    // Choose one in `class`, `interface`, `enum`, `annotation`, or `module`
-
     @Info(
         """
         Set the class to be a normal `class`.

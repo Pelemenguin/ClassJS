@@ -7,6 +7,7 @@ import dev.latvian.mods.kubejs.util.ClassFilter;
 import pelemenguin.classjs.content.ClassCreator;
 import pelemenguin.classjs.util.ClassJSUtils;
 import pelemenguin.classjs.util.DescriptorUtils;
+import pelemenguin.classjs.util.SignatureUtils;
 
 public class ClassJSPlugin extends KubeJSPlugin {
     
@@ -14,9 +15,10 @@ public class ClassJSPlugin extends KubeJSPlugin {
     public void registerBindings(BindingsEvent event) {
         if (event.manager.scriptType.isStartup()) {
             event.add("ClassCreator", ClassCreator.class);
-            event.add("DescriptorUtils", DescriptorUtils.class);
-            event.add("ClassJSUtils", ClassJSUtils.class);
         }
+        event.add("DescriptorUtils", DescriptorUtils.class);
+        event.add("ClassJSUtils", ClassJSUtils.class);
+        event.add("SignatureUtils", SignatureUtils.class);
     }
 
     @Override
