@@ -817,6 +817,29 @@ public class MethodCreator {
             return this;
         }
 
+        @Info(
+            """
+            Add an instruction to push a class reference onto the operand stack.
+
+            The method uses the `ldc` instruction to push the class reference.
+
+            **Operand Stack:** (*c* is the pushed class reference.)
+
+            { ... } → { ... , *c* }
+
+            **Note:** The pushed class reference is of type `java.lang.Class`.
+                It is different from KubeJS's classes, `java.lang.Class` can **NOT** be used to access static members.
+                If you want to access static members, use `getStaticField` or `invokeStaticMethod` instead.
+
+            @param className - The fully qualified name of the class (e.g., `java.lang.String`).
+            @returns This `MethodCodeBuilder` instance.
+            """
+        )
+        public MethodCodeBuilder pushClass(String className) {
+            this.methodVisitor.visitLdcInsn(org.objectweb.asm.Type.getType(DescriptorUtils.toFieldDescriptor(className)));
+            return this;
+        }
+
         private int getVariableIndexOrThrow(String variableName, boolean isWideType) {
             int result = getVariableIndexOrThrow(variableName);
             if (this.localVariableTypes.get(result).equals(isWideType)) return result;
