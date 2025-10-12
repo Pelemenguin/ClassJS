@@ -23,11 +23,15 @@ import pelemenguin.classjs.util.InvokeDynamicHelper;
 
 public class MethodCreator {
 
+    private static record ExceptionEntry(String tryBeginLabel, String tryEndLabel, String catchBeginLabel, String exceptionType) {}
+
     private ClassCreator parent;
 
     private int access = 0;
     private String name;
     private String descriptor;
+
+    private LinkedList<ExceptionEntry> exceptions = new LinkedList<>();
 
     // Parameter names used in MethodCodeBuilder
     private String[] paramNames;
@@ -364,6 +368,35 @@ public class MethodCreator {
 
     @Info(
         """
+        Register an exception handler for this method.
+
+        @param tryBlockBeginLabel - The label name marking the beginning of the try block.
+        @param tryBlockEndLabel - The label name marking the end of the try block.
+        @param catchBlockBeginLabel - The label name marking the beginning of the catch block.
+        @param exceptionType - The type of exception to catch (e.g., `java.lang.Exception`).
+            Use `java.lang.Throwable` to catch all exceptions.
+        @returns This `MethodCreator` instance.
+
+        @example
+        .registerExceptionHandler("tryStart", "tryEnd", "catchStart", "java.lang.Exception")
+        .code()
+            .label("tryStart")
+            ... // Code that may throw an exception
+            .gotoLabel("tryEnd")
+            .label("catchStart")
+            ... // Exception handling code
+            .label("tryEnd")
+            .returnVoid()
+            .build()
+        """
+    )
+    public MethodCreator registerExceptionHandler(String tryBlockBeginLabel, String tryBlockEndLabel, String catchBlockBeginLabel, String exceptionType) {
+        this.exceptions.addLast(new ExceptionEntry(tryBlockBeginLabel, tryBlockEndLabel, catchBlockBeginLabel, exceptionType.replace(".", "/")));
+        return this;
+    }
+
+    @Info(
+        """
         Begin byte code building.
 
         If you want to create *abstract* methods, use {@linkcode noCode}.
@@ -460,6 +493,15 @@ public class MethodCreator {
             this.parent = parent;
             this.methodVisitor = this.parent.parent.classWriter.visitMethod(this.parent.access, this.parent.name, this.parent.descriptor, null, null);
             this.methodVisitor.visitCode();
+
+            this.parent.exceptions.forEach(exceptionEntry -> {
+                this.methodVisitor.visitTryCatchBlock(
+                    this.getOrCreateLabel(exceptionEntry.tryBeginLabel),
+                    this.getOrCreateLabel(exceptionEntry.tryEndLabel),
+                    this.getOrCreateLabel(exceptionEntry.catchBeginLabel),
+                    exceptionEntry.exceptionType
+                );
+            });
 
             String[] paramTypes = DescriptorUtils.fromMethodDescriptor(this.parent.descriptor);
             if ((this.parent.access & Opcodes.ACC_STATIC) == 0) {
