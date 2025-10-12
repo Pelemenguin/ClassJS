@@ -27,29 +27,29 @@ public class SignatureUtils {
             this.identifier = identifier;
         }
 
-        public TypeVarBuilder extendingSimple(String superClass) {
+        public TypeVarBuilder extending(String superClass) {
             this.superClass = "L" + superClass.replace('.', '/') + ";";
             return this;
         }
 
-        // public TypeVarBuilder extending(String superClass, Consumer<TypeVarBuilder> typeVariableBuilder) {
-        //     TypeVarBuilder tvb = new TypeVarBuilder(superClass);
-        //     typeVariableBuilder.accept(tvb);
-        //     this.superClass = tvb.toString();
-        //     return this;
-        // }
+        public TypeVarBuilder extending(String superClass, Consumer<TypeSignatureBuilder> typeVariableBuilder) {
+            TypeSignatureBuilder tsb = new TypeSignatureBuilder(superClass);
+            typeVariableBuilder.accept(tsb);
+            this.superClass = tsb.toString();
+            return this;
+        }
 
-        public TypeVarBuilder implementingSimple(String superInterface) {
+        public TypeVarBuilder implementing(String superInterface) {
             this.superInterfaces.add("L" + superInterface.replace('.', '/') + ";");
             return this;
         }
 
-        // public TypeVarBuilder implementing(String superInterface, Consumer<TypeVarBuilder> typeVariableBuilder) {
-        //     TypeVarBuilder tvb = new TypeVarBuilder(superInterface);
-        //     typeVariableBuilder.accept(tvb);
-        //     this.superInterfaces.add(tvb.toString());
-        //     return this;
-        // }
+        public TypeVarBuilder implementing(String superInterface, Consumer<TypeSignatureBuilder> typeVariableBuilder) {
+            TypeSignatureBuilder tsb = new TypeSignatureBuilder(superInterface);
+            typeVariableBuilder.accept(tsb);
+            this.superInterfaces.add(tsb.toString());
+            return this;
+        }
 
         @Override
         public String toString() {
@@ -85,7 +85,7 @@ public class SignatureUtils {
             return this;
         }
 
-        public TypeSignatureBuilder appendTypeComplex(String type, Consumer<TypeSignatureBuilder> addingTypeParameters) {
+        public TypeSignatureBuilder appendType(String type, Consumer<TypeSignatureBuilder> addingTypeParameters) {
             TypeSignatureBuilder tsb = new TypeSignatureBuilder(type);
             addingTypeParameters.accept(tsb);
             this.typeParams.add(tsb.toString());
@@ -117,7 +117,7 @@ public class SignatureUtils {
             return this;
         }
 
-        public TypeSignatureBuilder appendAnyExtendsComplex(String className, Consumer<TypeSignatureBuilder> addingTypeParameters) {
+        public TypeSignatureBuilder appendAnyExtends(String className, Consumer<TypeSignatureBuilder> addingTypeParameters) {
             TypeSignatureBuilder tsb = new TypeSignatureBuilder(className);
             addingTypeParameters.accept(tsb);
             this.typeParams.add("+" + tsb.toString());
@@ -129,7 +129,7 @@ public class SignatureUtils {
             return this;
         }
 
-        public TypeSignatureBuilder appendAnySuperComplex(String className, Consumer<TypeSignatureBuilder> addingTypeParameters) {
+        public TypeSignatureBuilder appendAnySuper(String className, Consumer<TypeSignatureBuilder> addingTypeParameters) {
             TypeSignatureBuilder tsb = new TypeSignatureBuilder(className);
             addingTypeParameters.accept(tsb);
             this.typeParams.add("-" + tsb.toString());
