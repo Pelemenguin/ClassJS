@@ -67,7 +67,7 @@ public class ClassCreator {
     }
 
     public String getInternalName() {
-        return this.packagePrefix.replace(".", "/") + "/" + this.name;
+        return this.packagePrefix.replace('.', '/') + "/" + this.name.replace('.', '/');
     }
 
     @Info(
