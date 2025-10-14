@@ -20,6 +20,7 @@ import dev.latvian.mods.rhino.Function;
 import pelemenguin.classjs.ClassJS;
 import pelemenguin.classjs.util.DescriptorUtils;
 import pelemenguin.classjs.util.InvokeDynamicHelper;
+import pelemenguin.classjs.util.SignatureUtils;
 
 public class MethodCreator {
 
@@ -40,6 +41,39 @@ public class MethodCreator {
         this.parent = parent;
         this.name = name;
         this.descriptor = DescriptorUtils.toMethodDescriptor(parameterTypes, returnType);
+    }
+
+    @Info(
+        """
+        Set the generic signature for this method.
+
+        The signature should follow the format described in [Java Virtual Machine Specification](https://docs.oracle.com/javase/specs/jvms/se17/html/jvms-4.html#jvms-4.3.4).
+
+        **Note:** This method is optional. If not set, the method will not have a generic signature.
+            However, if the signature is set, the parameter types and return type of the method must match the signature.
+
+        @param methodSignatureBuilder - A consumer that accepts a `MethodSignatureBuilder` to build the signature.
+        @returns This `MethodCreator` instance.
+
+        @example
+        // Method with generic signature "<T:Ljava/lang/Number;>(Ljava/util/List<TT;>;)TT;"
+        .createMethod("genericMethod", ["java.util.List"], "java.lang.Number")
+        .signature((sig) => {
+            sig.withTypeVariable("T", (tv) => {
+                tv.extending("java.lang.Number");
+            })
+                .addParameter("java.util.List", (tv) => {
+                    tv.appendTypeVariable("T");
+                })
+                .setTypeVariableReturn("T");
+        })
+        """
+    )
+    public MethodCreator signature(Consumer<SignatureUtils.MethodSignatureBuilder> methodSignatureBuilder) {
+        SignatureUtils.MethodSignatureBuilder msb = SignatureUtils.methodSignatureBuilder();
+        methodSignatureBuilder.accept(msb);
+        this.descriptor = msb.toString();
+        return this;
     }
 
     @Info(

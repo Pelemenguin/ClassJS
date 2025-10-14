@@ -75,6 +75,31 @@ public class SignatureUtils {
         return new ClassSignatureBuilder();
     }
 
+    @Info(
+        """
+        Create a method signature for use in generic method signatures.
+
+        @returns A builder to build the method signature.
+
+        @example
+        // Result signature:     "<T:Ljava/lang/Number;>(Ljava/util/List<TT;>;)TT;^Ljava/io/IOException;"
+        // Java representation:  <T extends java.lang.Number> T exampleMethod(java.util.List<T>) throws java.io.IOException
+        SignatureUtils.methodSignatureBuilder()
+            .withTypeVariable("T", (tvb) -> {
+                tvb.extending("java.lang.Number");
+            })
+            .addParameter("java.util.List", (tsb) -> {
+                tsb.appendTypeVariable("T");
+            })
+            .setReturnType("T")
+            .throwing("java.io.IOException")
+            .toString();
+        """
+    )
+    public static MethodSignatureBuilder methodSignatureBuilder() {
+        return new MethodSignatureBuilder();
+    }
+
     public static class ClassSignatureBuilder {
 
         private String superClass = "Ljava/lang/Object;";
@@ -193,6 +218,244 @@ public class SignatureUtils {
                 for (String superInterface : this.superInterfaces) {
                     sb.append(superInterface);
                 }
+            }
+            return sb.toString();
+        }
+
+    }
+
+    public static class MethodSignatureBuilder {
+
+        private ArrayList<String> typeVars = new ArrayList<>();
+        private ArrayList<String> params = new ArrayList<>();
+        private String returnType = "V";
+        private ArrayList<String> throwing = new ArrayList<>();
+
+        public MethodSignatureBuilder() {}
+
+        @Info(
+            """
+            Add a type variable to the method.
+
+            The type variable will have an implicit upper bound of `java.lang.Object`.
+
+            @param identifier The identifier of the type variable. For example, "T" or "E".
+            @returns This `MethodSignatureBuilder` instance.
+            """
+        )
+        public MethodSignatureBuilder withTypeVariable(String identifier) {
+            this.typeVars.add(identifier + ":Ljava/lang/Object;");
+            return this;
+        }
+
+        @Info(
+            """
+            Add a type variable to the method with bounds.
+
+            @param identifier The identifier of the type variable. For example, "T" or "E".
+            @param typeVariableBuilder A consumer that accepts a `TypeVarBuilder` to build the bounds of the type variable.
+            @returns This `MethodSignatureBuilder` instance.
+            """
+        )
+        public MethodSignatureBuilder withTypeVariable(String identifier, Consumer<TypeVarBuilder> typeVariableBuilder) {
+            TypeVarBuilder tvb = new TypeVarBuilder(identifier);
+            typeVariableBuilder.accept(tvb);
+            this.typeVars.add(tvb.toString());
+            return this;
+        }
+
+        @Info(
+            """
+            Add a parameter to the method.
+
+            @param parameterType The full qualified name of the parameter type. For example, "java.lang.String".
+            @returns This `MethodSignatureBuilder` instance.
+            """
+        )
+        public MethodSignatureBuilder addParameter(String parameterType) {
+            this.params.add(DescriptorUtils.toFieldDescriptor(parameterType));
+            return this;
+        }
+
+        @Info(
+            """
+            Add a parameter to the method with type parameters.
+
+            @param rawType The raw type of the parameter. For example, "java.util.List".
+            @param typeSignatureBuilder A consumer that accepts a `TypeSignatureBuilder` to build the type parameters of the parameter.
+            @returns This `MethodSignatureBuilder` instance.
+            """
+        )
+        public MethodSignatureBuilder addParameter(String rawType, Consumer<TypeSignatureBuilder> typeSignatureBuilder) {
+            TypeSignatureBuilder tsb = new TypeSignatureBuilder(rawType);
+            typeSignatureBuilder.accept(tsb);
+            this.params.add(tsb.toString());
+            return this;
+        }
+
+        @Info(
+            """
+            Add a parameter to the method as a type variable.
+
+            @param identifier The identifier of the type variable. For example, "T" or "E".
+            @returns This `MethodSignatureBuilder` instance.
+            """
+        )
+        public MethodSignatureBuilder addTypeVariableParameter(String identifier) {
+            this.params.add("T" + identifier + ";");
+            return this;
+        }
+
+        @Info(
+            """
+            Add a parameter to the method as an array of type variable.
+
+            @param identifier The identifier of the type variable. For example, "T" or "E".
+            @returns This `MethodSignatureBuilder` instance.
+            """
+        )
+        public MethodSignatureBuilder addTypeVariableArrayParameter(String identifier) {
+            this.params.add("[T" + identifier + ";");
+            return this;
+        }
+
+        @Info(
+            """
+            Add a parameter to the method as an array of type variable with specified dimension.
+
+            @param identifier The identifier of the type variable. For example, "T" or "E".
+            @param dimension The dimension of the array. For example, 2 for a 2D array.
+            @returns This `MethodSignatureBuilder` instance.
+            """
+        )
+        public MethodSignatureBuilder addTypeVariableArrayParameter(String identifier, int dimension) {
+            this.params.add("[".repeat(dimension) + "T" + identifier + ";");
+            return this;
+        }
+
+        @Info(
+            """
+            Set the return type of the method.
+
+            @param returnType The full qualified name of the return type. For example, "java.lang.String".
+            @returns This `MethodSignatureBuilder` instance.
+            """
+        )
+        public MethodSignatureBuilder setReturnType(String returnType) {
+            this.returnType = DescriptorUtils.toFieldDescriptor(returnType);
+            return this;
+        }
+
+        @Info(
+            """
+            Set the return type of the method with type parameters.
+
+            @param rawType The raw type of the return type. For example, "java.util.List".
+            @param typeSignatureBuilder A consumer that accepts a `TypeSignatureBuilder` to build the type parameters of the return type.
+            @returns This `MethodSignatureBuilder` instance.
+            """
+        )
+        public MethodSignatureBuilder setReturnType(String rawType, Consumer<TypeSignatureBuilder> typeSignatureBuilder) {
+            TypeSignatureBuilder tsb = new TypeSignatureBuilder(rawType);
+            typeSignatureBuilder.accept(tsb);
+            this.returnType = tsb.toString();
+            return this;
+        }
+
+        @Info(
+            """
+            Set the return type of the method as a type variable.
+
+            @param identifier The identifier of the type variable. For example, "T" or "E".
+            @returns This `MethodSignatureBuilder` instance.
+            """
+        )
+        public MethodSignatureBuilder setTypeVariableReturn(String identifier) {
+            this.returnType = "T" + identifier + ";";
+            return this;
+        }
+
+        @Info(
+            """
+            Set the return type of the method as an array of type variable.
+
+            @param identifier The identifier of the type variable. For example, "T" or "E".
+            @returns This `MethodSignatureBuilder` instance.
+            """
+        )
+        public MethodSignatureBuilder setTypeVariableArrayReturn(String identifier) {
+            this.returnType = "[T" + identifier + ";";
+            return this;
+        }
+
+        @Info(
+            """
+            Set the return type of the method as an array of type variable with specified dimension.
+
+            @param identifier The identifier of the type variable. For example, "T" or "E".
+            @param dimension The dimension of the array. For example, 2 for a 2D array.
+            @returns This `MethodSignatureBuilder` instance.
+            """
+        )
+        public MethodSignatureBuilder setTypeVariableArrayReturn(String identifier, int dimension) {
+            this.returnType = "[".repeat(dimension) + "T" + identifier + ";";
+            return this;
+        }
+
+        @Info(
+            """
+            Add a thrown exception to the method.
+
+            @param exceptionType The full qualified name of the exception type. For example, "java.io.IOException".
+            @returns This `MethodSignatureBuilder` instance.
+            """
+        )
+        public MethodSignatureBuilder throwing(String exceptionType) {
+            this.throwing.add("L" + exceptionType.replace('.', '/') + ";");
+            return this;
+        }
+
+        @Info(
+            """
+            Add a thrown exception to the method with type parameters.
+
+            @param rawType The raw type of the exception. For example, "java.util.List".
+            @param typeSignatureBuilder A consumer that accepts a `TypeSignatureBuilder` to build the type parameters of the exception.
+            @returns This `MethodSignatureBuilder` instance.
+            """
+        )
+        public MethodSignatureBuilder throwing(String rawType, Consumer<TypeSignatureBuilder> typeSignatureBuilder) {
+            TypeSignatureBuilder tsb = new TypeSignatureBuilder(rawType);
+            typeSignatureBuilder.accept(tsb);
+            this.throwing.add(tsb.toString());
+            return this;
+        }
+
+        @Override
+        @Info(
+            """
+            Build the method signature string.
+
+            @returns The method signature string.
+            """
+        )
+        public String toString() {
+            StringBuilder sb = new StringBuilder();
+            if (!this.typeVars.isEmpty()) {
+                sb.append('<');
+                for (String typeVar : this.typeVars) {
+                    sb.append(typeVar);
+                }
+                sb.append('>');
+            }
+            sb.append('(');
+            for (String param : this.params) {
+                sb.append(param);
+            }
+            sb.append(')');
+            sb.append(this.returnType);
+            for (String ex : this.throwing) {
+                sb.append('^').append(ex);
             }
             return sb.toString();
         }
