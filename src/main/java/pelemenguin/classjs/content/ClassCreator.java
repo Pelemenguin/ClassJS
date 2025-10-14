@@ -422,6 +422,17 @@ public class ClassCreator {
         return new MethodCreator(this, name, paramTypes, returnType);
     }
 
+    public ClassCreator defaultConstructor() {
+        this.ensureHeadVisited();
+        return new MethodCreator(this, "<init>", new String[0], "void")
+            .toPublic()
+            .code()
+                .loadObject("this")
+                .invokeSpecial(this.superClass, "<init>", new String[0], "void")
+                .returnVoid()
+                .build();
+    }
+
     @Info(
         """
         Create a new field.
