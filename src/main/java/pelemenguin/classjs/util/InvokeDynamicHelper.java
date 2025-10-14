@@ -53,6 +53,20 @@ public class InvokeDynamicHelper {
     }
 
     private static MethodHandle createMethodHandle(Function jsFunction, MethodHandles.Lookup lookup, MethodType methodType) throws NoSuchMethodException, IllegalAccessException {
+        if (methodType.returnType() == void.class) {
+            MethodHandle handle = lookup.findStatic(
+                InvokeDynamicHelper.class,
+                "callJSNoReturn",
+                MethodType.methodType(void.class, Function.class, Object[].class)
+            );
+            handle = MethodHandles.insertArguments(handle, 0, jsFunction);
+            handle = methodType.parameterCount() == 0
+                ? MethodHandles.insertArguments(handle, 0, new Object[0])
+                : handle.asCollector(Object[].class, methodType.parameterCount());
+            handle = handle.asType(methodType);
+            return handle;
+        }
+
         MethodHandle handle = lookup.findStatic(
             InvokeDynamicHelper.class,
             "callJS",
@@ -80,6 +94,19 @@ public class InvokeDynamicHelper {
 
         Object result = f.call(context, scope, null, args);
         return Context.jsToJava(context, result, returnType);
+    }
+
+    @HideFromJS
+    public static void callJSNoReturn(Function f, Object[] args) {
+        Context context = KubeJS.getStartupScriptManager().context;
+        Scriptable scope = f.getParentScope();
+
+        Object[] jsObjects = new Object[args.length];
+        for (int i = 0; i < jsObjects.length; i ++) {
+            jsObjects[i] = Context.javaToJS(context, args[i], scope);
+        }
+
+        f.call(context, scope, null, args);
     }
 
     @HideFromJS

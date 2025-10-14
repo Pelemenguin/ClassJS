@@ -3629,7 +3629,7 @@ public class MethodCreator {
             InvokeDynamicHelper.registerFunction(
                 funcName,
                 jsFunction,
-                MethodType.fromMethodDescriptorString(descriptor, ClassLoader.getSystemClassLoader()),
+                MethodType.fromMethodDescriptorString(descriptor, ClassJS.class.getClassLoader()),
                 MethodHandles.lookup()
             );
 
