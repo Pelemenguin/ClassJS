@@ -1,6 +1,7 @@
 package pelemenguin.classjs.content;
 
 import java.util.ArrayList;
+import java.util.function.Consumer;
 
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
@@ -10,6 +11,7 @@ import dev.latvian.mods.kubejs.script.ScriptManager;
 import dev.latvian.mods.kubejs.typings.Info;
 import dev.latvian.mods.kubejs.util.ConsoleJS;
 import pelemenguin.classjs.util.ClassJSClassLoader;
+import pelemenguin.classjs.util.SignatureUtils;
 
 @Info("A class for Java classes creation.")
 public class ClassCreator {
@@ -24,6 +26,7 @@ public class ClassCreator {
     private int access = Opcodes.ACC_PUBLIC | Opcodes.ACC_SUPER;
     private String superClass = "java/lang/Object";
     private ArrayList<String> superInterfaces = new ArrayList<>();
+    private String signature = null;
 
     private boolean begunMethodCreation = false;
 
@@ -105,6 +108,35 @@ public class ClassCreator {
     public ClassCreator version(int version) {
         this.notBegunMethodCreationOrThrow();
         this.version = version;
+        return this;
+    }
+
+    @Info(
+        """
+        Specify the generic signature of the class.
+        Default value is `null`.
+
+        **Note:** The signature's super class and super interfaces must be the same as the ones specified by `extending(String)` and `implementing(String)` methods.
+
+        @param signatureBuilder - A function that accepts a `SignatureUtils.ClassSignatureBuilder` instance to build the class signature.
+
+        @returns This `ClassCreator` instance.
+
+        @example
+        // Create a class with generic signature `<T, E extends Cloneable>`
+        let classCreator = ClassCreator.create("MyGenericClass")
+            .signature((sig) => {
+                sig.withTypeParameter("T")
+                    .withTypeParameter("E", (tv) => {
+                        tv.implementing("java.lang.Cloneable");
+                    });
+            });
+        """
+    )
+    public ClassCreator signature(Consumer<SignatureUtils.ClassSignatureBuilder> signatureBuilder) {
+        this.notBegunMethodCreationOrThrow();
+        SignatureUtils.ClassSignatureBuilder csb = new SignatureUtils.ClassSignatureBuilder();
+        signatureBuilder.accept(csb);
         return this;
     }
 
@@ -372,7 +404,7 @@ public class ClassCreator {
     private void ensureHeadVisited() {
         if (this.begunMethodCreation) return;
         this.begunMethodCreation = true;
-        this.classWriter.visit(this.version, this.access, this.getInternalName(), null, this.superClass, this.superInterfaces.toArray(new String[0]));
+        this.classWriter.visit(this.version, this.access, this.getInternalName(), this.signature, this.superClass, this.superInterfaces.toArray(new String[0]));
     }
 
     @Info(

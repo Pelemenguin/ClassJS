@@ -1,17 +1,21 @@
 package pelemenguin.classjs.content;
 
+import java.util.function.Consumer;
+
 import javax.annotation.Nullable;
 
 import org.objectweb.asm.Opcodes;
 
 import dev.latvian.mods.kubejs.typings.Info;
 import pelemenguin.classjs.util.DescriptorUtils;
+import pelemenguin.classjs.util.SignatureUtils;
 
 public class FieldCreator {
 
     private ClassCreator parent;
     private String name;
     private String descriptor;
+    private String signature = null;
 
     private int access = 0;
     private Object defaultValue = null;
@@ -20,6 +24,34 @@ public class FieldCreator {
         this.parent = parent;
         this.name = name;
         this.descriptor = DescriptorUtils.toFieldDescriptor(type);
+    }
+
+    @Info(
+        """
+        Set the generic signature of this field.
+
+        A *generic signature* provides additional type information for fields, methods, and classes that use generics.
+
+        **Note:** This method is optional. If not set, the field will not have a generic signature.
+
+        @param rawType The raw type of the field. For example, `java.util.List` for a field of type `List<String>`.
+        @param signature The generic signature string.
+        @returns This `FieldCreator` instance.
+
+        @example
+        // Create a field with generic signature
+        .createField("myList", "java.util.List")
+        .signature("java.util.List", (sig) => {
+            sig.appendType("java.lang.String");
+        })
+        .build()
+        """
+    )
+    public FieldCreator signature(String rawType, Consumer<SignatureUtils.TypeSignatureBuilder> typeSignatureBuilder) {
+        SignatureUtils.TypeSignatureBuilder tsb = new SignatureUtils.TypeSignatureBuilder(this.descriptor);
+        typeSignatureBuilder.accept(tsb);
+        this.signature = tsb.toString();
+        return this;
     }
 
     @Info(
@@ -335,7 +367,7 @@ public class FieldCreator {
         """
     )
     public ClassCreator build() {
-        this.parent.classWriter.visitField(this.access, this.name, this.descriptor, null, this.defaultValue);
+        this.parent.classWriter.visitField(this.access, this.name, this.descriptor, this.signature, this.defaultValue);
         return this.parent;
     }
 
