@@ -432,13 +432,16 @@ public class MethodCreator {
 
     @Info(
         """
+        @deprecated Use `code(Consumer<MethodCodeBuilder>)` method instead.
+
         Begin byte code building.
 
         If you want to create *abstract* methods, use {@linkcode noCode}.
 
         @returns A `MethodCodeBuilder` for byte code building.  
 
-        **Note:** After the `build()` method of the `MethodCodeBuilder` is called,
+        **Note:** You must call the `build()` method of the `MethodCodeBuilder` at the end of the byte code.
+        After the `build()` method is called,
         The parent `ClassCreator` is returned directly.
         That means, once you have called this `code()` method, you should no longer access this `MethodCreator` again.
         Access modifier and other properties of this method should be set before calling this method.
@@ -446,6 +449,29 @@ public class MethodCreator {
     )
     public MethodCodeBuilder code() {
         return new MethodCodeBuilder(this);
+    }
+
+    @Info(
+        """
+        Builds the byte code.
+
+        If you want to create *abstract* methods, use {@linkcode noCode}.
+
+        Requires a function that accepts a `MethodCodeBuilder`.
+        In this function, do operations on the `MethodCodeBuilder` to generate byte code.
+
+        You should **NOT** need to call `build()` method on the `MethodCodeBuilder` in that function.
+        The `build()` method is called automatically.
+
+        @param codeBuilder A function that accepts a `MethodCodeBuilder`.
+        @returns The parent `ClassCreator`.
+        """
+    )
+    public ClassCreator code(Consumer<MethodCodeBuilder> codeBuilder) {
+        MethodCodeBuilder mcb = new MethodCodeBuilder(this);
+        codeBuilder.accept(mcb);
+        mcb.build();
+        return this.parent;
     }
 
     @Info(
