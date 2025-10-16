@@ -7,6 +7,7 @@ import javax.annotation.Nullable;
 import org.objectweb.asm.Opcodes;
 
 import dev.latvian.mods.kubejs.typings.Info;
+import pelemenguin.classjs.util.ClassNameWrapper;
 import pelemenguin.classjs.util.DescriptorUtils;
 import pelemenguin.classjs.util.SignatureUtils;
 
@@ -20,10 +21,10 @@ public class FieldCreator {
     private int access = 0;
     private Object defaultValue = null;
 
-    public FieldCreator(ClassCreator parent, String name, String type) {
+    public FieldCreator(ClassCreator parent, String name, ClassNameWrapper type) {
         this.parent = parent;
         this.name = name;
-        this.descriptor = DescriptorUtils.toFieldDescriptor(type);
+        this.descriptor = type.toFieldDescriptor();
     }
 
     @Info(
@@ -47,8 +48,8 @@ public class FieldCreator {
         .build()
         """
     )
-    public FieldCreator signature(String rawType, Consumer<SignatureUtils.TypeSignatureBuilder> typeSignatureBuilder) {
-        SignatureUtils.TypeSignatureBuilder tsb = new SignatureUtils.TypeSignatureBuilder(this.descriptor);
+    public FieldCreator signature(Consumer<SignatureUtils.TypeSignatureBuilder> typeSignatureBuilder) {
+        SignatureUtils.TypeSignatureBuilder tsb = new SignatureUtils.TypeSignatureBuilder(ClassNameWrapper.fromClassName(DescriptorUtils.fromFieldDescriptor(this.descriptor)));
         typeSignatureBuilder.accept(tsb);
         this.signature = tsb.toString();
         return this;

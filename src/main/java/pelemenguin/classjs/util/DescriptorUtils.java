@@ -50,7 +50,11 @@ public class DescriptorUtils {
         console.info(DescriptorUtils.toFieldDescriptor("java.lang.Integer[]"));
         """
     )
-    public static String toFieldDescriptor(String fieldType) {
+    public static String toFieldDescriptor(ClassNameWrapper fieldType) {
+        return toFieldDescriptorFromString(fieldType.getClassName());
+    }
+
+    private static String toFieldDescriptorFromString(String fieldType) {
         return switch (fieldType) {
             case "byte" -> "B";
             case "char" -> "C";
@@ -64,7 +68,7 @@ public class DescriptorUtils {
             default -> {
                 if (fieldType.endsWith("[]")) {
                     String elementType = fieldType.substring(0, fieldType.length() - 2);
-                    yield "[" + toFieldDescriptor(elementType);
+                    yield "[" + toFieldDescriptorFromString(elementType);
                 } else if (fieldType.contains(".")) {
                     yield "L" + fieldType.replace('.', '/') + ";";
                 } else {
@@ -97,14 +101,14 @@ public class DescriptorUtils {
         console.info(DescriptorUtils.toMethodDescriptor(["java.lang.String[]"], "java.lang.String"));
         """
     )
-    public static String toMethodDescriptor(String[] paramTypes, String returnType) {
+    public static String toMethodDescriptor(ClassNameWrapper[] paramTypes, ClassNameWrapper returnType) {
         StringBuilder descriptor = new StringBuilder();
         descriptor.append('(');
-        for (String paramType : paramTypes) {
-            descriptor.append(toFieldDescriptor(paramType));
+        for (ClassNameWrapper paramType : paramTypes) {
+            descriptor.append(paramType.toFieldDescriptor());
         }
         descriptor.append(')');
-        descriptor.append(toFieldDescriptor(returnType));
+        descriptor.append(returnType.toFieldDescriptor());
         return descriptor.toString();
     }
 

@@ -18,6 +18,7 @@ import dev.latvian.mods.kubejs.typings.Info;
 import dev.latvian.mods.kubejs.util.ConsoleJS;
 import dev.latvian.mods.rhino.Function;
 import pelemenguin.classjs.ClassJS;
+import pelemenguin.classjs.util.ClassNameWrapper;
 import pelemenguin.classjs.util.DescriptorUtils;
 import pelemenguin.classjs.util.InvokeDynamicHelper;
 import pelemenguin.classjs.util.SignatureUtils;
@@ -37,7 +38,7 @@ public class MethodCreator {
     // Parameter names used in MethodCodeBuilder
     private String[] paramNames;
     
-    public MethodCreator(ClassCreator parent, String name, String[] parameterTypes, String returnType) {
+    public MethodCreator(ClassCreator parent, String name, ClassNameWrapper[] parameterTypes, ClassNameWrapper returnType) {
         this.parent = parent;
         this.name = name;
         this.descriptor = DescriptorUtils.toMethodDescriptor(parameterTypes, returnType);
@@ -424,8 +425,8 @@ public class MethodCreator {
             .build()
         """
     )
-    public MethodCreator registerExceptionHandler(String tryBlockBeginLabel, String tryBlockEndLabel, String catchBlockBeginLabel, String exceptionType) {
-        this.exceptions.addLast(new ExceptionEntry(tryBlockBeginLabel, tryBlockEndLabel, catchBlockBeginLabel, exceptionType.replace(".", "/")));
+    public MethodCreator registerExceptionHandler(String tryBlockBeginLabel, String tryBlockEndLabel, String catchBlockBeginLabel, ClassNameWrapper exceptionType) {
+        this.exceptions.addLast(new ExceptionEntry(tryBlockBeginLabel, tryBlockEndLabel, catchBlockBeginLabel, exceptionType.getClassName().replace(".", "/")));
         return this;
     }
 
@@ -865,12 +866,13 @@ public class MethodCreator {
                 It is different from KubeJS's classes, `java.lang.Class` can **NOT** be used to access static members.
                 If you want to access static members, use `getStaticField` or `invokeStaticMethod` instead.
 
-            @param className - The fully qualified name of the class (e.g., `java.lang.String`).
+            @param clazz - The class (e.g., `java.lang.String`).
+                Can be a full qualified name or a class object loaded from `Java.loadClass`.
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder pushClass(String className) {
-            this.methodVisitor.visitLdcInsn(org.objectweb.asm.Type.getType(DescriptorUtils.toFieldDescriptor(className)));
+        public MethodCodeBuilder pushClass(ClassNameWrapper clazz) {
+            this.methodVisitor.visitLdcInsn(org.objectweb.asm.Type.getType(clazz.toFieldDescriptor()));
             return this;
         }
 
@@ -3422,17 +3424,18 @@ public class MethodCreator {
 
             { ... } → { ... , *value* }
 
-            @param className - The class containing the static field.
-                Use full qualified name (e.g., `java.lang.System`).
+            @param clazz - The class containing the static field.
+                Can be a full qualified name of a class or a class object loaded from `Java.loadClass`.
             @param fieldName - The name of the static field.
             @param fieldType - The type of the static field (e.g., `int`, `java.lang.String`, etc.).
             @returns This `MethodCodeBuilder` instance.
             @throws `IllegalAccessException` if the specified class is not allowed to be accessed.
             """
         )
-        public MethodCodeBuilder getStaticField(String className, String fieldName, String fieldType) throws IllegalAccessException {
+        public MethodCodeBuilder getStaticField(ClassNameWrapper clazz, String fieldName, ClassNameWrapper fieldType) throws IllegalAccessException {
+            String className = clazz.getClassName();
             ClassCreator.checkIfClassAllowed(className);
-            this.methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, className.replace(".", "/"), fieldName, DescriptorUtils.toFieldDescriptor(fieldType));
+            this.methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, className.replace(".", "/"), fieldName, fieldType.toFieldDescriptor());
             return this;
         }
 
@@ -3446,16 +3449,17 @@ public class MethodCreator {
 
             { ... , *value* } → { ... }
 
-            @param className - The class containing the static field.
-                Use full qualified name (e.g., `java.lang.System`).
+            @param clazz - The class containing the static field.
+                Can be a full qualified name of a class or a class object loaded from `Java.loadClass`.
             @param fieldName - The name of the static field.
             @param fieldType - The type of the static field (e.g., `int`, `java.lang.String`, etc.).
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder putStaticField(String className, String fieldName, String fieldType) throws IllegalAccessException {
+        public MethodCodeBuilder putStaticField(ClassNameWrapper clazz, String fieldName, ClassNameWrapper fieldType) throws IllegalAccessException {
+            String className = clazz.getClassName();
             ClassCreator.checkIfClassAllowed(className);
-            this.methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, className.replace(".", "/"), fieldName, DescriptorUtils.toFieldDescriptor(fieldType));
+            this.methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, className.replace(".", "/"), fieldName, fieldType.toFieldDescriptor());
             return this;
         }
 
@@ -3470,14 +3474,15 @@ public class MethodCreator {
 
             { ... , *objectRef* } → { ... , *fieldValue* }
 
-            @param objectType - The type of the object containing the instance field (e.g., `java.lang.String`).
+            @param objectType - The type of the object containing the instance field.
+                Can be a full qualified name of a class or a class object loaded from `Java.loadClass`.
             @param fieldName - The name of the instance field.
             @param fieldType - The type of the instance field (e.g., `int`, `java.lang.String`, etc.).
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder getField(String objectType, String fieldName, String fieldType) {
-            this.methodVisitor.visitFieldInsn(Opcodes.GETFIELD, objectType.replace(".", "/"), fieldName, DescriptorUtils.toFieldDescriptor(fieldType));
+        public MethodCodeBuilder getField(ClassNameWrapper objectType, String fieldName, ClassNameWrapper fieldType) {
+            this.methodVisitor.visitFieldInsn(Opcodes.GETFIELD, objectType.getClassName().replace(".", "/"), fieldName, fieldType.toFieldDescriptor());
             return this;
         }
 
@@ -3492,14 +3497,15 @@ public class MethodCreator {
 
             { ... , *objectRef* , *fieldValue* } → { ... }
 
-            @param objectType - The type of the object containing the instance field (e.g., `java.lang.String`).
+            @param objectType - The type of the object containing the instance field
+                Can be a full qualified name of a class or a class object loaded from `Java.loadClass`.
             @param fieldName - The name of the instance field.
             @param fieldType - The type of the instance field (e.g., `int`, `java.lang.String`, etc.).
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder putField(String objectType, String fieldName, String fieldType) {
-            this.methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, objectType.replace(".", "/"), fieldName, DescriptorUtils.toFieldDescriptor(fieldType));
+        public MethodCodeBuilder putField(ClassNameWrapper objectType, String fieldName, ClassNameWrapper fieldType) {
+            this.methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, objectType.getClassName().replace(".", "/"), fieldName, fieldType.toFieldDescriptor());
             return this;
         }
 
@@ -3515,15 +3521,16 @@ public class MethodCreator {
 
             { ... , *objectRef* , *arg1* , *arg2* , ... , *argN* } → { ... , *returnValue* }
 
-            @param objectType - The type of the object containing the instance method (e.g., `java.lang.String`).
+            @param objectType - The type of the object containing the instance method
+                Can be a full qualified name of a class or a class object loaded from `Java.loadClass`.
             @param methodName - The name of the instance method.
             @param paramTypes - An array of parameter types for the method (e.g., `int`, `java.lang.String`, etc.).
             @param returnType - The return type of the method (e.g., `int`, `java.lang.String`, or `void`).
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder invokeVirtual(String objectType, String methodName, String[] paramTypes, String returnType) {
-            this.methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, objectType.replace(".", "/"), methodName, DescriptorUtils.toMethodDescriptor(paramTypes, returnType), false);
+        public MethodCodeBuilder invokeVirtual(ClassNameWrapper objectType, String methodName, ClassNameWrapper[] paramTypes, ClassNameWrapper returnType) {
+            this.methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, objectType.getClassName().replace(".", "/"), methodName, DescriptorUtils.toMethodDescriptor(paramTypes, returnType), false);
             return this;
         }
 
@@ -3539,15 +3546,16 @@ public class MethodCreator {
 
             { ... , *objectRef* , *arg1* , *arg2* , ... , *argN* } → { ... , *returnValue* }
 
-            @param objectType - The type of the object containing the special instance method (e.g., `java.lang.String`).
+            @param objectType - The type of the object containing the special instance method
+                Can be a full qualified name of a class or a class object loaded from `Java.loadClass`.
             @param methodName - The name of the special instance method.
             @param paramTypes - An array of parameter types for the method (e.g., `int`, `java.lang.String`, etc.).
             @param returnType - The return type of the method (e.g., `int`, `java.lang.String`, or `void`).
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder invokeSpecial(String objectType, String methodName, String[] paramTypes, String returnType) {
-            this.methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, objectType.replace(".", "/"), methodName, DescriptorUtils.toMethodDescriptor(paramTypes, returnType), false);
+        public MethodCodeBuilder invokeSpecial(ClassNameWrapper objectType, String methodName, ClassNameWrapper[] paramTypes, ClassNameWrapper returnType) {
+            this.methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, objectType.getClassName().replace(".", "/"), methodName, DescriptorUtils.toMethodDescriptor(paramTypes, returnType), false);
             return this;
         }
 
@@ -3563,8 +3571,8 @@ public class MethodCreator {
 
             { ... , *arg1* , *arg2* , ... , *argN* } → { ... , *returnValue* }
 
-            @param className - The class containing the static method.
-                Use full qualified name (e.g., `java.lang.Math`).
+            @param clazz - The class containing the static method.
+                Can be a full qualified name of a class or a class object loaded from `Java.loadClass`.
             @param methodName - The name of the static method.
             @param paramTypes - An array of parameter types for the method (e.g., `int`, `java.lang.String`, etc.).
             @param returnType - The return type of the method (e.g., `int`, `java.lang.String`, or `void`).
@@ -3572,9 +3580,9 @@ public class MethodCreator {
             @throws `IllegalAccessException` if the specified class is not allowed to be accessed.
             """
         )
-        public MethodCodeBuilder invokeStatic(String className, String methodName, String[] paramTypes, String returnType) throws IllegalAccessException {
-            ClassCreator.checkIfClassAllowed(className);
-            this.methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, className.replace(".", "/"), methodName, DescriptorUtils.toMethodDescriptor(paramTypes, returnType), false);
+        public MethodCodeBuilder invokeStatic(ClassNameWrapper clazz, String methodName, ClassNameWrapper[] paramTypes, ClassNameWrapper returnType) throws IllegalAccessException {
+            ClassCreator.checkIfClassAllowed(clazz.getClassName());
+            this.methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, clazz.getClassName().replace(".", "/"), methodName, DescriptorUtils.toMethodDescriptor(paramTypes, returnType), false);
             return this;
         }
 
@@ -3590,15 +3598,16 @@ public class MethodCreator {
 
             { ... , *objectRef* , *arg1* , *arg2* , ... , *argN* } → { ... , *returnValue* }
 
-            @param interfaceType - The type of the interface containing the method (e.g., `java.util.List`).
+            @param interfaceType - The type of the interface containing the method.
+                Can be a full qualified name of a class or a class object loaded from `Java.loadClass`.
             @param methodName - The name of the interface method.
             @param paramTypes - An array of parameter types for the method (e.g., `int`, `java.lang.String`, etc.).
             @param returnType - The return type of the method (e.g., `int`, `java.lang.String`, or `void`).
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder invokeInterface(String interfaceType, String methodName, String[] paramTypes, String returnType) {
-            this.methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, interfaceType.replace(".", "/"), methodName, DescriptorUtils.toMethodDescriptor(paramTypes, returnType), true);
+        public MethodCodeBuilder invokeInterface(ClassNameWrapper interfaceType, String methodName, ClassNameWrapper[] paramTypes, ClassNameWrapper returnType) {
+            this.methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, interfaceType.getClassName().replace(".", "/"), methodName, DescriptorUtils.toMethodDescriptor(paramTypes, returnType), true);
             return this;
         }
 
@@ -3611,7 +3620,8 @@ public class MethodCreator {
             """
             Automatically generates a `invokedynamic` instruction to invoke a JavaScript function.
 
-            @param paramTypes - An array of parameter types for the method (e.g., `int`, `java.lang.String`, etc.).
+            @param paramTypes - An array of parameter types for the method.
+                Can be a full qualified name of a class or a class object loaded from `Java.loadClass`.
             @param returnType - The return type of the method (e.g., `int`, `java.lang.String`, or `void`).
             @param jsFunction - The JavaScript function to invoke.
 
@@ -3619,7 +3629,7 @@ public class MethodCreator {
             @throws `IllegalAccessException`
             """
         )
-        public MethodCodeBuilder invokeJS(String[] paramTypes, String returnType, Function jsFunction) throws NoSuchMethodException, IllegalAccessException, IllegalArgumentException, TypeNotPresentException {
+        public MethodCodeBuilder invokeJS(ClassNameWrapper[] paramTypes, ClassNameWrapper returnType, Function jsFunction) throws NoSuchMethodException, IllegalAccessException, IllegalArgumentException, TypeNotPresentException {
             String funcDesc = DescriptorUtils.toMethodDescriptor(paramTypes, returnType);
             return this.invokeJS(funcDesc, jsFunction);
         }
@@ -3650,14 +3660,15 @@ public class MethodCreator {
 
             { ... } → { ... , *objectRef* }
 
-            @param className - The name of the class to instantiate (e.g., `java.lang.String`).
+            @param clazz - The class to instantiate.
+                Can be a full qualified name of a class or a class object loaded from `Java.loadClass`.
             @returns This `MethodCodeBuilder` instance.
             @throws `IllegalAccessException` if the specified class is denied by the `ClassFilter`.
             """
         )
-        public MethodCodeBuilder newObject(String className) throws IllegalAccessException {
-            ClassCreator.checkIfClassAllowed(className);
-            this.methodVisitor.visitTypeInsn(Opcodes.NEW, className.replace(".", "/"));
+        public MethodCodeBuilder newObject(ClassNameWrapper clazz) throws IllegalAccessException {
+            ClassCreator.checkIfClassAllowed(clazz.getClassName());
+            this.methodVisitor.visitTypeInsn(Opcodes.NEW, clazz.getClassName().replace(".", "/"));
             return this;
         }
 
@@ -3682,15 +3693,16 @@ public class MethodCreator {
             .invokeSpecial("className", "<init>", [], "void")
             ```
 
-            @param className - The name of the class to instantiate (e.g., `java.lang.String`).
+            @param clazz - The class to instantiate (e.g., `java.lang.String`).
+                Can be a full qualified name of a class or a class object loaded from `Java.loadClass`.
             @returns This `MethodCodeBuilder` instance.
             @throws `IllegalAccessException` if the specified class is denied by the `ClassFilter`.
             """
         )
-        public MethodCodeBuilder newAndConstructObject(String className) throws IllegalAccessException {
-            this.newObject(className)
+        public MethodCodeBuilder newAndConstructObject(ClassNameWrapper clazz) throws IllegalAccessException {
+            this.newObject(clazz)
                 .duplicate()
-                .invokeSpecial(className, "<init>", new String[0], "void");
+                .invokeSpecial(clazz, "<init>", new ClassNameWrapper[0], ClassNameWrapper.VOID);
             return this;
         }
 
@@ -3717,13 +3729,14 @@ public class MethodCreator {
             **Note:** This method is equvilant to:
 
             ```javascript
-            .newObject(className)
+            .newObject(clazz)
             .duplicate()
             // Push constructor arguments here
             .invokeSpecial("className", "<init>", paramTypes, "void")
             ```
 
-            @param className - The name of the class to instantiate (e.g., `java.lang.String`).
+            @param clazz - The class to instantiate (e.g., `java.lang.String`).
+                Can be a full qualified name of a class or a class object loaded from `Java.loadClass`.
             @param paramTypes - An array of parameter types for the constructor (e.g., `int`, `java.lang.String`, etc.).
                 The types must match the types of the arguments pushed onto the operand stack before calling this method.
             @param beforeInvoking - A consumer that accepts this `MethodCodeBuilder` instance.
@@ -3733,11 +3746,11 @@ public class MethodCreator {
             @throws `IllegalAccessException` if the specified class is denied by the `ClassFilter`.
             """
         )
-        public MethodCodeBuilder newAndConstructObject(String className, String[] paramTypes, Consumer<MethodCodeBuilder> beforeInvoking) throws IllegalAccessException {
-            this.newObject(className)
+        public MethodCodeBuilder newAndConstructObject(ClassNameWrapper clazz, ClassNameWrapper[] paramTypes, Consumer<MethodCodeBuilder> beforeInvoking) throws IllegalAccessException {
+            this.newObject(clazz)
                 .duplicate();
             beforeInvoking.accept(this);
-            return this.invokeSpecial(className, "<init>", paramTypes, "void");
+            return this.invokeSpecial(clazz, "<init>", paramTypes, ClassNameWrapper.VOID);
         }
 
         @Info(
@@ -3795,12 +3808,13 @@ public class MethodCreator {
 
             { ... , *count* } → { ... , *arrayref* }
 
-            @param elementType - The name of the class or interface of the elements in the new array (e.g., `java.lang.String` for an array of `String`).
+            @param elementType - The class or interface of the elements in the new array (e.g., `java.lang.String` for an array of `String`).
+                Can be a full qualified name of a class or a class object loaded from `Java.loadClass`.
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder newObjectArray(String elementType) {
-            String descriptor = DescriptorUtils.toFieldDescriptor(elementType);
+        public MethodCodeBuilder newObjectArray(ClassNameWrapper elementType) {
+            String descriptor = elementType.toFieldDescriptor();
             this.methodVisitor.visitTypeInsn(Opcodes.ANEWARRAY, descriptor);
             return this;
         }
@@ -3859,12 +3873,13 @@ public class MethodCreator {
 
             { ... , *objectRef* } → { ... , *objectRef* }
 
-            @param className - The name of the class or interface to cast the object to (e.g., `java.lang.String`).
+            @param clazz - The class or interface to cast the object to (e.g., `java.lang.String`).
+                Can be a full qualified name of a class or a class object loaded from `Java.loadClass`.
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder checkCast(String className) {
-            this.methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, className.replace(".", "/"));
+        public MethodCodeBuilder checkCast(ClassNameWrapper clazz) {
+            this.methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, clazz.getClassName().replace(".", "/"));
             return this;
         }
 
@@ -3879,12 +3894,13 @@ public class MethodCreator {
 
             { ... , *objectRef* } → { ... , *result* }
 
-            @param className - The name of the class or interface to check against (e.g., `java.lang.String`).
+            @param clazz - The class or interface to check against (e.g., `java.lang.String`).
+                Can be a full qualified name of a class or a class object loaded from `Java.loadClass`.
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder isInstanceOf(String className) {
-            this.methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, className.replace(".", "/"));
+        public MethodCodeBuilder isInstanceOf(ClassNameWrapper clazz) {
+            this.methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, clazz.getClassName().replace(".", "/"));
             return this;
         }
 
@@ -4016,8 +4032,8 @@ public class MethodCreator {
             @returns This `MethodCodeBuilder` instance.
             """
         )
-        public MethodCodeBuilder newMultiArray(String arrayElementType, int dimension) {
-            String descriptor = DescriptorUtils.toFieldDescriptor(arrayElementType);
+        public MethodCodeBuilder newMultiArray(ClassNameWrapper arrayElementType, int dimension) {
+            String descriptor = arrayElementType.toFieldDescriptor();
             this.methodVisitor.visitMultiANewArrayInsn("[".repeat(dimension) + descriptor, dimension);
             return this;
         }

@@ -34,7 +34,8 @@ public class SignatureUtils {
         """
         Create a type signature for use in generic class signatures or method signatures.
 
-        @param className The class name of the type. For example, "java.util.List" or "java.lang.String".
+        @param clazz The type. For example, "java.util.List" or "java.lang.String".
+            Can be a full qualified name or a class object loaded from `Java.loadClass`.
         @returns A builder to build the type signature.
 
         @example
@@ -50,8 +51,8 @@ public class SignatureUtils {
             .toString();
         """
     )
-    public static TypeSignatureBuilder typeSignatureBuilder(String className) {
-        return new TypeSignatureBuilder(className);
+    public static TypeSignatureBuilder typeSignatureBuilder(ClassNameWrapper clazz) {
+        return new TypeSignatureBuilder(clazz);
     }
 
     @Info(
@@ -116,8 +117,8 @@ public class SignatureUtils {
             @returns This `ClassSignatureBuilder` instance.
             """
         )
-        public ClassSignatureBuilder extending(String superClass) {
-            this.superClass = "L" + superClass.replace('.', '/') + ";";
+        public ClassSignatureBuilder extending(ClassNameWrapper superClass) {
+            this.superClass = "L" + superClass.getClassName().replace('.', '/') + ";";
             return this;
         }
 
@@ -130,7 +131,7 @@ public class SignatureUtils {
             @returns This `ClassSignatureBuilder` instance.
             """
         )
-        public ClassSignatureBuilder extending(String superClass, Consumer<TypeSignatureBuilder> typeVariableBuilder) {
+        public ClassSignatureBuilder extending(ClassNameWrapper superClass, Consumer<TypeSignatureBuilder> typeVariableBuilder) {
             TypeSignatureBuilder tsb = new TypeSignatureBuilder(superClass);
             typeVariableBuilder.accept(tsb);
             this.superClass = tsb.toString();
@@ -145,8 +146,8 @@ public class SignatureUtils {
             @returns This `ClassSignatureBuilder` instance.
             """
         )
-        public ClassSignatureBuilder implementing(String superInterface) {
-            this.superInterfaces.add("L" + superInterface.replace('.', '/') + ";");
+        public ClassSignatureBuilder implementing(ClassNameWrapper superInterface) {
+            this.superInterfaces.add("L" + superInterface.getClassName().replace('.', '/') + ";");
             return this;
         }
 
@@ -159,7 +160,7 @@ public class SignatureUtils {
             @returns This `ClassSignatureBuilder` instance.
             """
         )
-        public ClassSignatureBuilder implementing(String superInterface, Consumer<TypeSignatureBuilder> typeVariableBuilder) {
+        public ClassSignatureBuilder implementing(ClassNameWrapper superInterface, Consumer<TypeSignatureBuilder> typeVariableBuilder) {
             TypeSignatureBuilder tsb = new TypeSignatureBuilder(superInterface);
             typeVariableBuilder.accept(tsb);
             this.superInterfaces.add(tsb.toString());
@@ -272,7 +273,7 @@ public class SignatureUtils {
             @returns This `MethodSignatureBuilder` instance.
             """
         )
-        public MethodSignatureBuilder addParameter(String parameterType) {
+        public MethodSignatureBuilder addParameter(ClassNameWrapper parameterType) {
             this.params.add(DescriptorUtils.toFieldDescriptor(parameterType));
             return this;
         }
@@ -286,7 +287,7 @@ public class SignatureUtils {
             @returns This `MethodSignatureBuilder` instance.
             """
         )
-        public MethodSignatureBuilder addParameter(String rawType, Consumer<TypeSignatureBuilder> typeSignatureBuilder) {
+        public MethodSignatureBuilder addParameter(ClassNameWrapper rawType, Consumer<TypeSignatureBuilder> typeSignatureBuilder) {
             TypeSignatureBuilder tsb = new TypeSignatureBuilder(rawType);
             typeSignatureBuilder.accept(tsb);
             this.params.add(tsb.toString());
@@ -341,7 +342,7 @@ public class SignatureUtils {
             @returns This `MethodSignatureBuilder` instance.
             """
         )
-        public MethodSignatureBuilder setReturnType(String returnType) {
+        public MethodSignatureBuilder setReturnType(ClassNameWrapper returnType) {
             this.returnType = DescriptorUtils.toFieldDescriptor(returnType);
             return this;
         }
@@ -355,7 +356,7 @@ public class SignatureUtils {
             @returns This `MethodSignatureBuilder` instance.
             """
         )
-        public MethodSignatureBuilder setReturnType(String rawType, Consumer<TypeSignatureBuilder> typeSignatureBuilder) {
+        public MethodSignatureBuilder setReturnType(ClassNameWrapper rawType, Consumer<TypeSignatureBuilder> typeSignatureBuilder) {
             TypeSignatureBuilder tsb = new TypeSignatureBuilder(rawType);
             typeSignatureBuilder.accept(tsb);
             this.returnType = tsb.toString();
@@ -410,8 +411,8 @@ public class SignatureUtils {
             @returns This `MethodSignatureBuilder` instance.
             """
         )
-        public MethodSignatureBuilder throwing(String exceptionType) {
-            this.throwing.add("L" + exceptionType.replace('.', '/') + ";");
+        public MethodSignatureBuilder throwing(ClassNameWrapper exceptionType) {
+            this.throwing.add("L" + exceptionType.getClassName().replace('.', '/') + ";");
             return this;
         }
 
@@ -424,7 +425,7 @@ public class SignatureUtils {
             @returns This `MethodSignatureBuilder` instance.
             """
         )
-        public MethodSignatureBuilder throwing(String rawType, Consumer<TypeSignatureBuilder> typeSignatureBuilder) {
+        public MethodSignatureBuilder throwing(ClassNameWrapper rawType, Consumer<TypeSignatureBuilder> typeSignatureBuilder) {
             TypeSignatureBuilder tsb = new TypeSignatureBuilder(rawType);
             typeSignatureBuilder.accept(tsb);
             this.throwing.add(tsb.toString());
@@ -480,8 +481,8 @@ public class SignatureUtils {
             @returns This `TypeVarBuilder` instance.
             """
         )
-        public TypeVarBuilder extending(String superClass) {
-            this.superClass = "L" + superClass.replace('.', '/') + ";";
+        public TypeVarBuilder extending(ClassNameWrapper superClass) {
+            this.superClass = "L" + superClass.getClassName().replace('.', '/') + ";";
             return this;
         }
 
@@ -494,7 +495,7 @@ public class SignatureUtils {
             @returns This `TypeVarBuilder` instance.
             """
         )
-        public TypeVarBuilder extending(String superClass, Consumer<TypeSignatureBuilder> typeVariableBuilder) {
+        public TypeVarBuilder extending(ClassNameWrapper superClass, Consumer<TypeSignatureBuilder> typeVariableBuilder) {
             TypeSignatureBuilder tsb = new TypeSignatureBuilder(superClass);
             typeVariableBuilder.accept(tsb);
             this.superClass = tsb.toString();
@@ -509,8 +510,8 @@ public class SignatureUtils {
             @returns This `TypeVarBuilder` instance.
             """
         )
-        public TypeVarBuilder implementing(String superInterface) {
-            this.superInterfaces.add("L" + superInterface.replace('.', '/') + ";");
+        public TypeVarBuilder implementing(ClassNameWrapper superInterface) {
+            this.superInterfaces.add("L" + superInterface.getClassName().replace('.', '/') + ";");
             return this;
         }
 
@@ -523,7 +524,7 @@ public class SignatureUtils {
             @returns This `TypeVarBuilder` instance.
             """
         )
-        public TypeVarBuilder implementing(String superInterface, Consumer<TypeSignatureBuilder> typeVariableBuilder) {
+        public TypeVarBuilder implementing(ClassNameWrapper superInterface, Consumer<TypeSignatureBuilder> typeVariableBuilder) {
             TypeSignatureBuilder tsb = new TypeSignatureBuilder(superInterface);
             typeVariableBuilder.accept(tsb);
             this.superInterfaces.add(tsb.toString());
@@ -564,8 +565,8 @@ public class SignatureUtils {
         private ArrayList<String> typeParams = new ArrayList<>();
         private int arrayDimension = 0;
 
-        public TypeSignatureBuilder(String className) {
-            this.className = className.replace('.', '/');
+        public TypeSignatureBuilder(ClassNameWrapper clazz) {
+            this.className = clazz.getClassName().replace('.', '/');
         }
 
         @Info(
@@ -576,7 +577,7 @@ public class SignatureUtils {
             @returns This `TypeSignatureBuilder` instance.
             """
         )
-        public TypeSignatureBuilder appendType(String type) {
+        public TypeSignatureBuilder appendType(ClassNameWrapper type) {
             this.typeParams.add(DescriptorUtils.toFieldDescriptor(type));
             return this;
         }
@@ -590,7 +591,7 @@ public class SignatureUtils {
             @returns This `TypeSignatureBuilder` instance.
             """
         )
-        public TypeSignatureBuilder appendType(String type, Consumer<TypeSignatureBuilder> addingTypeParameters) {
+        public TypeSignatureBuilder appendType(ClassNameWrapper type, Consumer<TypeSignatureBuilder> addingTypeParameters) {
             TypeSignatureBuilder tsb = new TypeSignatureBuilder(type);
             addingTypeParameters.accept(tsb);
             this.typeParams.add(tsb.toString());
@@ -653,12 +654,13 @@ public class SignatureUtils {
             """
             Append a wildcard type with upper bound to the type signature.
 
-            @param className The full qualified name of the upper bound. For example, "java.lang.Number".
+            @param clazz The upper bound. For example, "java.lang.Number".
+                Can be a full qualified name or a class object loaded from `Java.loadClass`.
             @returns This `TypeSignatureBuilder` instance.
             """
         )
-        public TypeSignatureBuilder appendAnyExtends(String className) {
-            this.typeParams.add("+L" + className.replace('.', '/') + ";");
+        public TypeSignatureBuilder appendAnyExtends(ClassNameWrapper clazz) {
+            this.typeParams.add("+L" + clazz.getClassName().replace('.', '/') + ";");
             return this;
         }
 
@@ -666,13 +668,14 @@ public class SignatureUtils {
             """
             Append a wildcard type with upper bound to the type signature with type parameters.
 
-            @param className The full qualified name of the upper bound. For example, "java.util.List".
+            @param clazz The full qualified name of the upper bound. For example, "java.util.List".
+                Can be a full qualified name or a class object loaded from `Java.loadClass`.
             @param addingTypeParameters A consumer that accepts a `TypeSignatureBuilder` to build the type parameters of the upper bound.
             @returns This `TypeSignatureBuilder` instance.
             """
         )
-        public TypeSignatureBuilder appendAnyExtends(String className, Consumer<TypeSignatureBuilder> addingTypeParameters) {
-            TypeSignatureBuilder tsb = new TypeSignatureBuilder(className);
+        public TypeSignatureBuilder appendAnyExtends(ClassNameWrapper clazz, Consumer<TypeSignatureBuilder> addingTypeParameters) {
+            TypeSignatureBuilder tsb = new TypeSignatureBuilder(clazz);
             addingTypeParameters.accept(tsb);
             this.typeParams.add("+" + tsb.toString());
             return this;
@@ -682,12 +685,13 @@ public class SignatureUtils {
             """
             Append a wildcard type with lower bound to the type signature.
 
-            @param className The full qualified name of the lower bound. For example, "java.lang.Number".
+            @param clazz The lower bound. For example, "java.lang.Number".
+                Can be a full qualified name or a class object loaded from `Java.loadClass`.
             @returns This `TypeSignatureBuilder` instance.
             """
         )
-        public TypeSignatureBuilder appendAnySuper(String className) {
-            this.typeParams.add("-L" + className.replace('.', '/') + ";");
+        public TypeSignatureBuilder appendAnySuper(ClassNameWrapper clazz) {
+            this.typeParams.add("-L" + clazz.getClassName().replace('.', '/') + ";");
             return this;
         }
 
@@ -695,13 +699,14 @@ public class SignatureUtils {
             """
             Append a wildcard type with lower bound to the type signature with type parameters.
 
-            @param className The full qualified name of the lower bound. For example, "java.util.List".
+            @param clazz The lower bound. For example, "java.util.List".
+                Can be a full qualified name or a class object loaded from `Java.loadClass`.
             @param addingTypeParameters A consumer that accepts a `TypeSignatureBuilder` to build the type parameters of the lower bound.
             @returns This `TypeSignatureBuilder` instance.
             """
         )
-        public TypeSignatureBuilder appendAnySuper(String className, Consumer<TypeSignatureBuilder> addingTypeParameters) {
-            TypeSignatureBuilder tsb = new TypeSignatureBuilder(className);
+        public TypeSignatureBuilder appendAnySuper(ClassNameWrapper clazz, Consumer<TypeSignatureBuilder> addingTypeParameters) {
+            TypeSignatureBuilder tsb = new TypeSignatureBuilder(clazz);
             addingTypeParameters.accept(tsb);
             this.typeParams.add("-" + tsb.toString());
             return this;

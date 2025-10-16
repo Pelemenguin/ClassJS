@@ -11,6 +11,7 @@ import dev.latvian.mods.kubejs.script.ScriptManager;
 import dev.latvian.mods.kubejs.typings.Info;
 import dev.latvian.mods.kubejs.util.ConsoleJS;
 import pelemenguin.classjs.util.ClassJSClassLoader;
+import pelemenguin.classjs.util.ClassNameWrapper;
 import pelemenguin.classjs.util.SignatureUtils;
 
 @Info("A class for Java classes creation.")
@@ -145,7 +146,7 @@ public class ClassCreator {
         Specify the superclass of the class.
         Default value is `java.lang.Object`.
 
-        @param superClassName - The full qualified name of the superclass. For example, `java.lang.Object` for Object class.
+        @param superClassName - The full qualified name of the superclass, or a class object loaded by `Java.loadClass`.
         @returns This `ClassCreator` instance.
 
         @throws `IllegalAccessException` if the specified class is denied by KubeJS script manager.
@@ -156,9 +157,11 @@ public class ClassCreator {
             .extending("java.util.ArrayList");
         """
     )
-    public ClassCreator extending(String superClassName) throws IllegalAccessException {
+    public ClassCreator extending(ClassNameWrapper superClass) throws IllegalAccessException {
+        this.notBegunMethodCreationOrThrow();
+        String superClassName = superClass.getClassName();
         checkIfClassAllowed(superClassName);
-        this.superClass = superClassName.replace(".", "/");
+        this.superClass = superClassName.replace('.', '/');
         return this;
     }
 
@@ -166,7 +169,7 @@ public class ClassCreator {
         """
         Add an interface that the class implements.
 
-        @param superInterfaceName - The full qualified name of the interface. For example, `java.io.Serializable` for Serializable interface.
+        @param superInterfaceName - The full qualified name of the interface, or a class object loaded by `Java.loadClass`.
         @returns This `ClassCreator` instance.
 
         @throws `IllegalAccessException` if the specified class is denied by KubeJS script manager.
@@ -177,9 +180,11 @@ public class ClassCreator {
             .implementing("java.io.Serializable");
         """
     )
-    public ClassCreator implementing(String superInterfaceName) throws IllegalAccessException {
+    public ClassCreator implementing(ClassNameWrapper superInterface) throws IllegalAccessException {
+        this.notBegunMethodCreationOrThrow();
+        String superInterfaceName = superInterface.getClassName();
         checkIfClassAllowed(superInterfaceName);
-        this.superInterfaces.add(superInterfaceName.replace(".", "/"));
+        this.superInterfaces.add(superInterfaceName.replace('.', '/'));
         return this;
     }
 
@@ -417,18 +422,18 @@ public class ClassCreator {
         @param returnType - The return type. Same as `paramTypes`. Use `void` for no return value.
         """
     )
-    public MethodCreator createMethod(String name, String[] paramTypes, String returnType) {
+    public MethodCreator createMethod(String name, ClassNameWrapper[] paramTypes, ClassNameWrapper returnType) {
         this.ensureHeadVisited();
         return new MethodCreator(this, name, paramTypes, returnType);
     }
 
     public ClassCreator defaultConstructor() {
         this.ensureHeadVisited();
-        return new MethodCreator(this, "<init>", new String[0], "void")
+        return new MethodCreator(this, "<init>", new ClassNameWrapper[0], ClassNameWrapper.VOID)
             .toPublic()
             .code()
                 .loadObject("this")
-                .invokeSpecial(this.superClass, "<init>", new String[0], "void")
+                .invokeSpecial(ClassNameWrapper.fromClassName(this.superClass), "<init>", new ClassNameWrapper[0], ClassNameWrapper.VOID)
                 .returnVoid()
                 .build();
     }
@@ -438,11 +443,10 @@ public class ClassCreator {
         Create a new field.
 
         @param name - The field name.
-        @param type - The field type. Use full qualified name with `.` seperated.
-            For example, `int`, `java.lang.Object`(not just `Object`), `java.lang.String`.
+        @param type - The field type. Can be the full qualified name of a class or a class object loaded by `Java.loadClass`.
         """
     )
-    public FieldCreator createField(String name, String type) {
+    public FieldCreator createField(String name, ClassNameWrapper type) {
         this.ensureHeadVisited();
         return new FieldCreator(this, name, type);
     }
