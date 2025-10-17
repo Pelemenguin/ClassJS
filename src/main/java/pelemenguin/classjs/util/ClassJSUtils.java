@@ -41,4 +41,32 @@ public class ClassJSUtils {
         return ClassCreator.CUSTOM_PREFIX + "." + customClassName;
     }
 
+    @Info(
+        """
+        Load a custom class created by `ClassCreator` by its custom class name.
+
+        This is useful when you want to access these classes in `server_scripts` or `client_scripts`,
+        as `ClassCreator` is only allowed to be used in `startup_scripts`.
+
+        @param className The custom class name used in `ClassCreator.create(String)`.
+        @returns The loaded class, or `null` if the class is not found.
+
+        @example
+        let clazz = ClassCreator.create("TestClass")
+            .toPublic()
+            .createField("testField", "int")
+                .toPublic()
+                .defaultNumericValue(127)
+            .defineClass();
+
+        // Load the class using its custom class name
+        let loadedClass = ClassJSUtils.loadClass("TestClass");
+
+        console.info(loadedClass === clazz); // true
+        """
+    )
+    public static Object loadClass(String className) {
+        return ClassJSClassLoader.CREATED_CLASSES.get(getCustomClassName(className));
+    }
+
 }
