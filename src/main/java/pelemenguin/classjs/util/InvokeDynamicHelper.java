@@ -113,8 +113,17 @@ public class InvokeDynamicHelper {
     public static void registerFunction(String id, Function func, @Nullable MethodType type, @Nullable MethodHandles.Lookup lookup) throws NoSuchMethodException, IllegalAccessException {
         if (REGISTERED_FUNCTIONS.containsKey(id)) {
             FunctionStatus status = REGISTERED_FUNCTIONS.get(id);
+
+            // If method is not called before, the `CallSite` is not generated.
+            if (status.callSite == null) {
+                REGISTERED_FUNCTIONS.put(id, new FunctionStatus(func, null, status.type));
+                return;
+            }
+
             if (lookup == null) throw new IllegalArgumentException("lookup cannot be null when updating functions");
+            ClassJS.LOGGER.debug("Reload previous function: " + id);
             MethodHandle created = createMethodHandle(func, lookup, status.type);
+
             status.callSite.setTarget(created);
             REGISTERED_FUNCTIONS.put(id, new FunctionStatus(func, status.callSite, status.type));
             return;

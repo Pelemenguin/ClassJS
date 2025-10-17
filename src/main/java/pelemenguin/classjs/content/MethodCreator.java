@@ -3639,7 +3639,7 @@ public class MethodCreator {
 
         private int anonymousFunctionCounter = 0;
         private String generateFuncId() {
-            return this.parent.parent.getClassName() + "/" + this.parent.name + "(" + this.parent.descriptor.hashCode() + ")@" + (this.anonymousFunctionCounter ++);
+            return this.parent.parent.getClassName() + "/" + this.parent.name + this.parent.descriptor + "@" + (this.anonymousFunctionCounter ++);
         }
 
         @Info(
