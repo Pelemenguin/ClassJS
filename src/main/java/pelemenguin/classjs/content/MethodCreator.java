@@ -1,7 +1,6 @@
 package pelemenguin.classjs.content;
 
 import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -492,6 +491,23 @@ public class MethodCreator {
         return this.parent;
     }
 
+    @Info(
+        """
+        Create a method that calls a JavaScript function.
+
+        The JavaScript function will receive the method parameters as arguments.
+
+        @param jsFunction - The JavaScript function to be called.
+        @returns The parent `ClassCreator`.
+
+        @example
+        .createMethod("methodName", ["int", "java.lang.String"], "void")
+        .codeJS((arg0, arg1) => {
+            console.info("Argument 0:", arg0);
+            console.info("Argument 1:", arg1);
+        })
+        """
+    )
     public ClassCreator codeJS(Function jsFunction) throws NoSuchMethodException, IllegalAccessException, IllegalArgumentException, TypeNotPresentException {
         String[] params = DescriptorUtils.fromMethodDescriptor(this.descriptor);
         MethodCodeBuilder mcb = new MethodCodeBuilder(this);
@@ -506,6 +522,62 @@ public class MethodCreator {
             }
         }
         mcb.invokeJS(this.descriptor, jsFunction);
+        switch (params[0]) {
+            case "void": mcb.returnVoid(); break;
+            case "int", "boolean", "byte", "char", "short": mcb.returnInt(); break;
+            case "float": mcb.returnFloat(); break;
+            case "double": mcb.returnDouble(); break;
+            case "long": mcb.returnLong(); break;
+            default: mcb.returnObject(); break;
+        }
+        return mcb.build();
+    }
+
+    @Info(
+        """
+        Create a method that calls a JavaScript function with `this` context.
+
+        The JavaScript function will receive the `this` object as the first argument,
+        followed by the method parameters.
+
+        **Note:** If this method is *static*, `null` will be passed as the `this` object.
+
+        @param jsFunction - The JavaScript function to be called.
+        @returns The parent `ClassCreator`.
+
+        @example
+        .createMethod("methodWithThis", ["int"], "void")
+        .codeJSWithThis((thisObj, arg0) => {
+            console.info("This object:", thisObj);
+            console.info("Argument 0:", arg0);
+        })
+        """
+    )
+    public ClassCreator codeJSWithThis(Function jsFunction) throws NoSuchMethodException, IllegalAccessException, IllegalArgumentException, TypeNotPresentException {
+        // The first one is the return type
+        String[] params = DescriptorUtils.fromMethodDescriptor(this.descriptor);
+        MethodCodeBuilder mcb = new MethodCodeBuilder(this);
+        if ((this.access & Opcodes.ACC_STATIC) == 0) {
+            mcb.loadObject("this"); // Load this
+        } else {
+            mcb.pushNull();
+        }
+        for (int i = 1; i < params.length; i ++) {
+            String varName = "arg" + (i - 1);
+            switch (params[i]) {
+                case "int", "boolean", "byte", "char", "short": mcb.loadInt(varName); break;
+                case "float": mcb.loadFloat(varName); break;
+                case "double": mcb.loadDouble(varName); break;
+                case "long": mcb.loadLong(varName); break;
+                default: mcb.loadObject(varName); break;
+            }
+        }
+        ClassNameWrapper[] actualParams = new ClassNameWrapper[params.length];
+        actualParams[0] = new ClassNameWrapper(this.parent.getClassName());
+        for (int i = 1; i < params.length; ++ i) {
+            actualParams[i] = new ClassNameWrapper(params[i]);
+        }
+        mcb.invokeJS(DescriptorUtils.toMethodDescriptor(actualParams, new ClassNameWrapper(params[0])), jsFunction);
         switch (params[0]) {
             case "void": mcb.returnVoid(); break;
             case "int", "boolean", "byte", "char", "short": mcb.returnInt(); break;
@@ -3665,7 +3737,7 @@ public class MethodCreator {
             InvokeDynamicHelper.registerFunction(
                 funcName,
                 jsFunction,
-                MethodType.fromMethodDescriptorString(descriptor, ClassJS.class.getClassLoader()),
+                descriptor,
                 MethodHandles.lookup()
             );
 

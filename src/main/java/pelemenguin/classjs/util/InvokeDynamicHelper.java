@@ -21,7 +21,7 @@ import pelemenguin.classjs.ClassJS;
 
 public class InvokeDynamicHelper {
 
-    public static record FunctionStatus(Function function, CallSite callSite, MethodType type) {}
+    public static record FunctionStatus(Function function, CallSite callSite, String descriptor) {}
 
     private final static ConcurrentHashMap<String, FunctionStatus> REGISTERED_FUNCTIONS = new ConcurrentHashMap<>();
 
@@ -47,7 +47,7 @@ public class InvokeDynamicHelper {
         CallSite result = new MutableCallSite(methodType);
         result.setTarget(createMethodHandle(jsFunction, lookup, methodType));
 
-        REGISTERED_FUNCTIONS.put(funcId, new FunctionStatus(jsFunction, result, methodType));
+        REGISTERED_FUNCTIONS.put(funcId, new FunctionStatus(jsFunction, result, methodType.toMethodDescriptorString()));
 
         return result;
     }
@@ -110,26 +110,26 @@ public class InvokeDynamicHelper {
     }
 
     @HideFromJS
-    public static void registerFunction(String id, Function func, @Nullable MethodType type, @Nullable MethodHandles.Lookup lookup) throws NoSuchMethodException, IllegalAccessException {
+    public static void registerFunction(String id, Function func, @Nullable String descriptor, @Nullable MethodHandles.Lookup lookup) throws NoSuchMethodException, IllegalAccessException {
         if (REGISTERED_FUNCTIONS.containsKey(id)) {
             FunctionStatus status = REGISTERED_FUNCTIONS.get(id);
 
             // If method is not called before, the `CallSite` is not generated.
             if (status.callSite == null) {
-                REGISTERED_FUNCTIONS.put(id, new FunctionStatus(func, null, status.type));
+                REGISTERED_FUNCTIONS.put(id, new FunctionStatus(func, null, status.descriptor));
                 return;
             }
 
             if (lookup == null) throw new IllegalArgumentException("lookup cannot be null when updating functions");
             ClassJS.LOGGER.debug("Reload previous function: " + id);
-            MethodHandle created = createMethodHandle(func, lookup, status.type);
+            MethodHandle created = createMethodHandle(func, lookup, MethodType.fromMethodDescriptorString(status.descriptor, ClassJSClassLoader.INSTANCE));
 
             status.callSite.setTarget(created);
-            REGISTERED_FUNCTIONS.put(id, new FunctionStatus(func, status.callSite, status.type));
+            REGISTERED_FUNCTIONS.put(id, new FunctionStatus(func, status.callSite, status.descriptor));
             return;
         }
-        if (type == null) throw new IllegalArgumentException("type cannot be null when initializing");
-        REGISTERED_FUNCTIONS.put(id, new FunctionStatus(func, null, type));
+        if (descriptor == null) throw new IllegalArgumentException("type cannot be null when initializing");
+        REGISTERED_FUNCTIONS.put(id, new FunctionStatus(func, null, descriptor));
         ClassJS.LOGGER.debug("New function registered: " + id);
         ClassJS.LOGGER.debug("All registered functions: " + REGISTERED_FUNCTIONS.keySet());
     }
