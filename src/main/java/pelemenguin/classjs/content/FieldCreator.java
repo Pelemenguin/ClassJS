@@ -296,7 +296,7 @@ public class FieldCreator {
 
         The default value is used to initialize the field when an instance of the class is created.
 
-        **Only fields that are *static final*, and of primitive types (`char` excluded) type can have a default value.**
+        **Only fields that are *static*, and of primitive types (`char` excluded) type can have a default value.**
 
         **Note:** For `char` and `String` type fields, use `defaultStringValue()` instead.
 
@@ -329,7 +329,7 @@ public class FieldCreator {
 
         The default value is used to initialize the field when an instance of the class is created.
 
-        **Only fields that are *static final*, and of `char` type or `String` type can have a default value.**
+        **Only fields that are *static*, and of `char` type or `String` type can have a default value.**
 
         **Note:** For numeric types, use `defaultNumericValue()` instead.
 
