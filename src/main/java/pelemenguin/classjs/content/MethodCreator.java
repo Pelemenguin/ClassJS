@@ -459,7 +459,7 @@ public class MethodCreator {
         Requires a function that accepts a `MethodCodeBuilder`.
         In this function, do operations on the `MethodCodeBuilder` to generate byte code.
 
-        You should **NOT** need to call `build()` method on the `MethodCodeBuilder` in that function.
+        You should **NOT** call `build()` method on the `MethodCodeBuilder` in that function.
         The `build()` method is called automatically.
 
         @param codeBuilder A function that accepts a `MethodCodeBuilder`.

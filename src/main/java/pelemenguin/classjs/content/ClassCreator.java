@@ -427,6 +427,21 @@ public class ClassCreator {
         return new MethodCreator(this, name, paramTypes, returnType);
     }
 
+    @Info(
+        """
+        Create a default constructor.
+
+        The created constructor is equivalent to the following Java code:
+
+        ```java
+        public ClassName() {
+            super();
+        }
+        ```
+
+        @returns The created constructor method.
+        """
+    )
     public ClassCreator defaultConstructor() {
         this.ensureHeadVisited();
         return new MethodCreator(this, "<init>", new ClassNameWrapper[0], ClassNameWrapper.VOID)
@@ -436,6 +451,44 @@ public class ClassCreator {
                 .invokeSpecial(ClassNameWrapper.fromClassName(this.superClass), "<init>", new ClassNameWrapper[0], ClassNameWrapper.VOID)
                 .returnVoid()
                 .build();
+    }
+
+    @Info(
+        """
+        Create a static class initializer method.
+
+        This is equivalent to:
+
+        ```javascript
+        .createMethod("<clinit>", [], "void").toStatic()
+        ```
+
+        @returns The created class initializer `MethodCreator`.
+            You should continue to build the method body by `code()`, or `codeJS()`.
+        """
+    )
+    public MethodCreator createClassInitMethod() {
+        this.ensureHeadVisited();
+        return this.createMethod("<clinit>", new ClassNameWrapper[0], new ClassNameWrapper("void"))
+            .toStatic();
+    }
+
+    @Info(
+        """
+        Create a constructor.
+
+        This is equivalent to:
+
+        ```javascript
+        .createMethod("<init>", paramTypes, "void")
+        ```
+
+        @returns The created constructor `MethodCreator`.
+            You should continue to build the method body by `code()`, or `codeJS()`.
+        """
+    )
+    public MethodCreator createConstructor(ClassNameWrapper[] paramTypes) {
+        return this.createMethod("<init>", paramTypes, new ClassNameWrapper("void"));
     }
 
     @Info(
