@@ -433,6 +433,31 @@ public class AnnotationCreator<P> {
 
     @Info(
         """
+        Adds an array of nested annotations as a value to the current annotation.
+
+        @param name - The name of the nested annotation array value.
+        @param className - The class of the nested annotations.
+        @param annotations - The consumers to build each nested annotation. You don't have to call `build()` on them.
+        @returns The current `AnnotationCreator` instance.
+        """
+    )
+    public AnnotationCreator<P> withAnnotationArray(String name, ClassNameWrapper className, Consumer<AnnotationCreator<AnnotationCreator<P>>>[] annotations) {
+        this.toBuild = this.toBuild.andThen(av -> {
+            AnnotationVisitor arrayAv = av.visitArray(name);
+            for (Consumer<AnnotationCreator<AnnotationCreator<P>>> annotationConsumer : annotations) {
+                AnnotationVisitor nestedAv = arrayAv.visitAnnotation(null, DescriptorUtils.toFieldDescriptor(className));
+                AnnotationCreator<AnnotationCreator<P>> nested = new AnnotationCreator<>(this, className);
+                annotationConsumer.accept(nested);
+                nested.toBuild.accept(nestedAv);
+                nestedAv.visitEnd();
+            }
+            arrayAv.visitEnd();
+        });
+        return this;
+    }
+
+    @Info(
+        """
         Finalizes the annotation and returns to the parent creator.
 
         @returns The parent creator instance.
