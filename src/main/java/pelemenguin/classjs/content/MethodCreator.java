@@ -27,6 +27,7 @@ public class MethodCreator {
     private static record ExceptionEntry(String tryBeginLabel, String tryEndLabel, String catchBeginLabel, String exceptionType) {}
 
     private ClassCreator parent;
+    protected Consumer<MethodVisitor> annotations = (mv) -> {};
 
     private int access = 0;
     private String name;
@@ -74,6 +75,10 @@ public class MethodCreator {
         methodSignatureBuilder.accept(msb);
         this.descriptor = msb.toString();
         return this;
+    }
+
+    public AnnotationCreator<MethodCreator> annotated(ClassNameWrapper annotationType) {
+        return new AnnotationCreator<>(this, annotationType);
     }
 
     @Info(
@@ -447,7 +452,9 @@ public class MethodCreator {
         """
     )
     public MethodCodeBuilder code() {
-        return new MethodCodeBuilder(this);
+        MethodCodeBuilder mcb = new MethodCodeBuilder(this);
+        this.annotations.accept(mcb.methodVisitor);
+        return mcb;
     }
 
     @Info(
@@ -468,6 +475,7 @@ public class MethodCreator {
     )
     public ClassCreator code(Consumer<MethodCodeBuilder> codeBuilder) {
         MethodCodeBuilder mcb = new MethodCodeBuilder(this);
+        this.annotations.accept(mcb.methodVisitor);
         codeBuilder.accept(mcb);
         mcb.build();
         return this.parent;
@@ -487,6 +495,7 @@ public class MethodCreator {
     )
     public ClassCreator noCode() {
         MethodVisitor mv = this.parent.classWriter.visitMethod(this.access, this.name, this.descriptor, null, null);
+        this.annotations.accept(mv);
         mv.visitEnd();
         return this.parent;
     }
@@ -511,6 +520,7 @@ public class MethodCreator {
     public ClassCreator codeJS(Function jsFunction) throws NoSuchMethodException, IllegalAccessException, IllegalArgumentException, TypeNotPresentException {
         String[] params = DescriptorUtils.fromMethodDescriptor(this.descriptor);
         MethodCodeBuilder mcb = new MethodCodeBuilder(this);
+        this.annotations.accept(mcb.methodVisitor);
         for (int i = 1; i < params.length; i ++) {
             String varName = "arg" + (i - 1);
             switch (params[i]) {
@@ -557,6 +567,7 @@ public class MethodCreator {
         // The first one is the return type
         String[] params = DescriptorUtils.fromMethodDescriptor(this.descriptor);
         MethodCodeBuilder mcb = new MethodCodeBuilder(this);
+        this.annotations.accept(mcb.methodVisitor);
         if ((this.access & Opcodes.ACC_STATIC) == 0) {
             mcb.loadObject("this"); // Load this
         } else {
@@ -610,7 +621,7 @@ public class MethodCreator {
 
         private MethodCreator parent;
 
-        private MethodVisitor methodVisitor;
+        protected MethodVisitor methodVisitor;
 
         private ArrayList<String> localVariableNames = new ArrayList<>();
         

@@ -4,6 +4,7 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
+import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.Opcodes;
 
 import dev.latvian.mods.kubejs.typings.Info;
@@ -17,6 +18,8 @@ public class FieldCreator {
     private String name;
     private String descriptor;
     private String signature = null;
+
+    protected Consumer<FieldVisitor> annotations = fv -> {};
 
     private int access = 0;
     private Object defaultValue = null;
@@ -53,6 +56,22 @@ public class FieldCreator {
         typeSignatureBuilder.accept(tsb);
         this.signature = tsb.toString();
         return this;
+    }
+    
+    @Info(
+        """
+        Annotate this field with the specified annotation.
+
+        Annotations provide metadata about the field that can be used by the compiler and runtime.
+
+        **Note:** This method can be called multiple times to add multiple annotations.
+
+        @param annotationClass The class name of the annotation to add.
+        @returns An `AnnotationCreator` instance to configure the annotation further.
+        """
+    )
+    public AnnotationCreator<FieldCreator> annotated(ClassNameWrapper annotationClass) {
+        return new AnnotationCreator<>(this, annotationClass);
     }
 
     @Info(
@@ -368,7 +387,9 @@ public class FieldCreator {
         """
     )
     public ClassCreator build() {
-        this.parent.classWriter.visitField(this.access, this.name, this.descriptor, this.signature, this.defaultValue);
+        FieldVisitor fv = this.parent.classWriter.visitField(this.access, this.name, this.descriptor, this.signature, this.defaultValue);
+        this.annotations.accept(fv);
+        fv.visitEnd();
         return this.parent;
     }
 

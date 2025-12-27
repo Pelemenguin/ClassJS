@@ -5,6 +5,8 @@ import java.util.function.Consumer;
 import javax.annotation.Nullable;
 
 import org.objectweb.asm.AnnotationVisitor;
+import org.objectweb.asm.FieldVisitor;
+import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 
 import dev.latvian.mods.kubejs.typings.Info;
@@ -447,15 +449,34 @@ public class AnnotationCreator<P> {
             return this.parent;
         }
 
-        AnnotationVisitor av;
-        if (this.parent instanceof ClassCreator parent) {
-            av = parent.classWriter.visitAnnotation(this.descriptor, this.visible);
-        } else {
-            throw new IllegalStateException("Parent type not supported for AnnotationCreator");
+        if (this.parent instanceof MethodCreator parent) {
+            parent.annotations = parent.annotations.andThen(mv -> {
+                MethodVisitor method = (MethodVisitor) mv;
+                AnnotationVisitor av = method.visitAnnotation(this.descriptor, this.visible);
+                this.toBuild.accept(av);
+                av.visitEnd();
+            });
+            return this.parent;
         }
-        this.toBuild.accept(av);
-        av.visitEnd();
-        return this.parent;
+
+        if (this.parent instanceof FieldCreator parent) {
+            parent.annotations = parent.annotations.andThen(fv -> {
+                FieldVisitor field = (FieldVisitor) fv;
+                AnnotationVisitor av = field.visitAnnotation(this.descriptor, this.visible);
+                this.toBuild.accept(av);
+                av.visitEnd();
+            });
+            return this.parent;
+        }
+
+        if (this.parent instanceof ClassCreator parent) {
+            AnnotationVisitor av = parent.classWriter.visitAnnotation(this.descriptor, this.visible);
+            this.toBuild.accept(av);
+            av.visitEnd();
+            return this.parent;
+        }
+
+        throw new IllegalStateException("Parent type not supported for AnnotationCreator");
     }
 
 }
