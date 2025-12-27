@@ -15,7 +15,6 @@ import org.objectweb.asm.Opcodes;
 import dev.latvian.mods.kubejs.KubeJS;
 import dev.latvian.mods.rhino.Context;
 import dev.latvian.mods.rhino.Function;
-import dev.latvian.mods.rhino.Scriptable;
 import dev.latvian.mods.rhino.util.HideFromJS;
 import pelemenguin.classjs.ClassJS;
 
@@ -74,9 +73,8 @@ public class InvokeDynamicHelper {
         );
 
         handle = MethodHandles.insertArguments(handle, 0, jsFunction, methodType.returnType());
-        handle = methodType.parameterCount() == 0
-            ? MethodHandles.insertArguments(handle, 0, new Object[0])
-            : handle.asCollector(Object[].class, methodType.parameterCount());
+        handle = handle.asCollector(Object[].class, methodType.parameterCount());
+
         handle = handle.asType(methodType);
 
         return handle;
@@ -85,28 +83,16 @@ public class InvokeDynamicHelper {
     @HideFromJS
     public static Object callJS(Function f, Class<?> returnType, Object[] args) {
         Context context = KubeJS.getStartupScriptManager().context;
-        Scriptable scope = f.getParentScope();
 
-        Object[] jsObjects = new Object[args.length];
-        for (int i = 0; i < jsObjects.length; i ++) {
-            jsObjects[i] = Context.javaToJS(context, args[i], scope);
-        }
-
-        Object result = f.call(context, scope, null, args);
-        return Context.jsToJava(context, result, returnType);
+        Object result = f.call(context, f, null, args);
+        return result;
     }
 
     @HideFromJS
     public static void callJSNoReturn(Function f, Object[] args) {
         Context context = KubeJS.getStartupScriptManager().context;
-        Scriptable scope = f.getParentScope();
 
-        Object[] jsObjects = new Object[args.length];
-        for (int i = 0; i < jsObjects.length; i ++) {
-            jsObjects[i] = Context.javaToJS(context, args[i], scope);
-        }
-
-        f.call(context, scope, null, args);
+        f.call(context, f, null, args);
     }
 
     @HideFromJS
