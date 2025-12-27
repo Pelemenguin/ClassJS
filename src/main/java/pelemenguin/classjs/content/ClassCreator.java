@@ -3,15 +3,20 @@ package pelemenguin.classjs.content;
 import java.util.ArrayList;
 import java.util.function.Consumer;
 
+import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
 import dev.latvian.mods.kubejs.KubeJS;
 import dev.latvian.mods.kubejs.script.ScriptManager;
 import dev.latvian.mods.kubejs.typings.Info;
 import dev.latvian.mods.kubejs.util.ConsoleJS;
+import dev.latvian.mods.rhino.Context;
+import dev.latvian.mods.rhino.EvaluatorException;
 import pelemenguin.classjs.util.ClassJSClassLoader;
 import pelemenguin.classjs.util.ClassNameWrapper;
+import pelemenguin.classjs.util.DescriptorUtils;
 import pelemenguin.classjs.util.SignatureUtils;
 
 @Info("A class for Java classes creation.")
@@ -414,6 +419,18 @@ public class ClassCreator {
 
     @Info(
         """
+        Create a new annotation for the class.
+
+        @param annotationClass - The annotation class. Can be the full qualified name of a class or a class object loaded by `Java.loadClass`.
+        @returns The created `AnnotationCreator` instance.
+        """
+    )
+    public AnnotationCreator<ClassCreator> annotated(ClassNameWrapper annotationClass) {
+        return new AnnotationCreator<ClassCreator>(this, annotationClass);
+    }
+
+    @Info(
+        """
         Create a new method.
 
         @param name - The method name.
@@ -425,6 +442,54 @@ public class ClassCreator {
     public MethodCreator createMethod(String name, ClassNameWrapper[] paramTypes, ClassNameWrapper returnType) {
         this.ensureHeadVisited();
         return new MethodCreator(this, name, paramTypes, returnType);
+    }
+
+    @Info(
+        """
+        Create a new method for annotation type.
+
+        `toAnnotation()` must be called before this method.
+
+        @param name - The method name.
+        @param returnType - The return type. Same as `paramTypes`.
+        @returns The created `ClassCreator` instance.
+        @throws `IllegalStateException` if the class is not an annotation type.
+        """
+    )
+    public ClassCreator createAnnotationMethod(String name, ClassNameWrapper returnType) {
+        this.ensureHeadVisited();
+        if ((this.access & Opcodes.ACC_ANNOTATION) == 0) {
+            throw new IllegalStateException("createAnnotationMethod() can only be called on annotation types. Call toAnnotation() first.");
+        }
+        MethodVisitor mv = this.classWriter.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_ABSTRACT, name, "()" + DescriptorUtils.toFieldDescriptor(returnType), null, null);
+        mv.visitEnd();
+        return this;
+    }
+
+    @Info(
+        """
+        Create a new method for annotation type with default value.
+
+        `toAnnotation()` must be called before this method.
+
+        @param name - The method name.
+        @param returnType - The return type. Same as `paramTypes`.
+        @param defaultValue - The default value of the annotation method.
+        @returns The created `ClassCreator` instance.
+        @throws `IllegalStateException` if the class is not an annotation type.
+        """
+    )
+    public ClassCreator createAnnotationMethod(String name, ClassNameWrapper returnType, Object defaultValue) throws EvaluatorException, ClassNotFoundException {
+        defaultValue = Context.jsToJava(KubeJS.getStartupScriptManager().context, defaultValue, Class.forName(returnType.getClassName()));
+
+        this.ensureHeadVisited();
+        MethodVisitor mv = this.classWriter.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_ABSTRACT, name, "()" + DescriptorUtils.toFieldDescriptor(returnType), null, null);
+        AnnotationVisitor av = mv.visitAnnotationDefault();
+        av.visit(null, defaultValue);
+
+        av.visitEnd();
+        mv.visitEnd();
+        return this;
     }
 
     @Info(

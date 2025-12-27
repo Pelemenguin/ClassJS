@@ -85,7 +85,7 @@ public class InvokeDynamicHelper {
         Context context = KubeJS.getStartupScriptManager().context;
 
         Object result = f.call(context, f, null, args);
-        return result;
+        return Context.jsToJava(context, result, returnType);
     }
 
     @HideFromJS
